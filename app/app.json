@@ -9,7 +9,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.romain.tamerelechat",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -19,14 +22,17 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/tamerelechat.caf"]
+          "sounds": [
+            "./assets/tamerelechat.caf"
+          ]
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "REMPLACER_PAR_TON_PROJECT_ID"
+        "projectId": "d0a5047c-d94c-428e-83f8-5a3a06c44e1f"
       }
-    }
+    },
+    "owner": "ucuai"
   }
 }

@@ -16,5 +16,8 @@
     "react": "18.2.0",
     "react-native": "0.74.5"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "eas-cli": "^20.5.1"
+  }
 }
