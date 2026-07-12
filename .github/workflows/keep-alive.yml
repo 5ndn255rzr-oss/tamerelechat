@@ -1,0 +1,15 @@
+# Optionnel : ping le serveur Render toutes les ~14 min pour l'empêcher de
+# s'endormir (plan gratuit). Remplace l'URL par la tienne, ou supprime ce fichier.
+name: keep-alive
+
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping le serveur
+        run: curl -sS --max-time 30 https://tamerelechat-server.onrender.com/ || true

@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "ta mère le chat",
+    "slug": "tamerelechat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.romain.tamerelechat",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
+    },
+    "android": {
+      "package": "com.romain.tamerelechat"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/tamerelechat.caf"]
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "REMPLACER_PAR_TON_PROJECT_ID"
+      }
+    }
+  }
+}

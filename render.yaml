@@ -1,0 +1,14 @@
+# Blueprint Render — déploie le serveur push automatiquement.
+# Sur render.com : New > Blueprint > connecte ce repo GitHub, Render lit ce fichier.
+services:
+  - type: web
+    name: tamerelechat-server
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: DEADLINE_SEC
+        value: "10"
