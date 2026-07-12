@@ -23,7 +23,16 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/tamerelechat.caf"
+            "./assets/snd_tamerelechat.caf",
+            "./assets/snd_reveille.caf",
+            "./assets/snd_alloterre.caf",
+            "./assets/snd_tesou.caf",
+            "./assets/snd_debout.caf",
+            "./assets/snd_reponds.caf",
+            "./assets/snd_coucou.caf",
+            "./assets/snd_troptard.caf",
+            "./assets/snd_bipbip.caf",
+            "./assets/snd_leveletoi.caf"
           ]
         }
       ],

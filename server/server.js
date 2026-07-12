@@ -15,6 +15,22 @@ const PORT = process.env.PORT || 3000;
 const DEADLINE_SEC = Number(process.env.DEADLINE_SEC || 10);
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
+// Sons embarqués dans l'app (doivent matcher app.json > expo-notifications > sounds).
+// Sert de liste blanche : on ne joue que ces sons-là.
+const SOUNDS = new Set([
+  "snd_tamerelechat.caf",
+  "snd_reveille.caf",
+  "snd_alloterre.caf",
+  "snd_tesou.caf",
+  "snd_debout.caf",
+  "snd_reponds.caf",
+  "snd_coucou.caf",
+  "snd_troptard.caf",
+  "snd_bipbip.caf",
+  "snd_leveletoi.caf",
+]);
+const DEFAULT_SOUND = "snd_tamerelechat.caf";
+
 // État en mémoire (suffisant pour 2 téléphones ; réinitialisé au redémarrage).
 const devices = new Map(); // name -> { token, updatedAt }
 const pending = new Map(); // targetName -> { timeout, from, firesAt }
@@ -79,6 +95,9 @@ app.post("/poke", async (req, res) => {
   const { from } = req.body || {};
   if (!from) return res.status(400).json({ error: "from requis" });
 
+  // Son de sanction choisi par l'expéditeur (validé contre la liste blanche).
+  const sound = SOUNDS.has(req.body?.sound) ? req.body.sound : DEFAULT_SOUND;
+
   const target = otherDevice(from);
   if (!target) return res.status(409).json({ error: "l'autre téléphone n'est pas encore enregistré" });
 
@@ -100,13 +119,13 @@ app.post("/poke", async (req, res) => {
     console.log(`[sanction] ${target} n'a pas répondu -> son 🔊`);
     await sendPush(dev.token, {
       title: "😼",
-      body: "ta mère le chat",
-      sound: "tamerelechat.caf",
+      body: "trop tard...",
+      sound,
       data: { type: "sanction" },
     });
   }, DEADLINE_SEC * 1000);
 
-  pending.set(target, { timeout, from, firesAt });
+  pending.set(target, { timeout, from, firesAt, sound });
   console.log(`[poke] ${from} -> ${target} (deadline ${DEADLINE_SEC}s)`);
   res.json({ ok: true, target, deadlineSec: DEADLINE_SEC });
 });
