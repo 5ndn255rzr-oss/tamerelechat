@@ -16,7 +16,7 @@ import * as Notifications from "expo-notifications";
 
 // >>> À CONFIGURER : l'URL publique de ton serveur (voir README). <<<
 // En test local sur le même wifi : "http://192.168.X.X:3000"
-const SERVER_URL = "http://172.19.10.171:3000";
+const SERVER_URL = "https://tamerelechat-server.onrender.com";
 
 // Affiche les notifs même quand l'app est au premier plan.
 Notifications.setNotificationHandler({
