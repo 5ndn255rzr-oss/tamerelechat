@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>RELAIS — Chaîne Humaine 😼</title>
+<style>
+  :root {
+    --bg:#0e0b18; --card:#1a1630; --card2:#221c3d; --line:#2f2850; --ink:#f3f0ff;
+    --muted:#9a92c0; --faint:#6f679a; --spark:#ffc93d; --violet:#7c5cff; --violet-soft:#a99bff;
+    --green:#29d17f; --danger:#ff4d6d;
+    --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; }
+  html,body { height:100%; }
+  body { background: radial-gradient(1000px 500px at 50% -8%, #2a1f52, transparent 60%), var(--bg);
+    color:var(--ink); font-family:var(--sans); min-height:100%; display:flex; justify-content:center;
+    user-select:none; -webkit-user-select:none; overflow-x:hidden; transition:background .3s; }
+  body.doomed { background:#2a0d16; }
+  .wrap { width:100%; max-width:460px; padding:20px 16px 40px; }
+  .logo { font-weight:900; font-size:30px; letter-spacing:2px; text-align:center;
+    background:linear-gradient(180deg,#fff,var(--violet-soft)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .tag { text-align:center; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--faint); margin:3px 0 22px; }
+
+  input,button { font-family:var(--sans); font-size:16px; }
+  input { width:100%; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:14px; padding:15px; }
+  .btn { width:100%; border:0; border-radius:16px; padding:16px; font-weight:800; font-size:17px; color:#fff; cursor:pointer; }
+  .btn.primary { background:linear-gradient(135deg,var(--violet),#5a3ff0); box-shadow:0 8px 24px rgba(124,92,255,.4); }
+  .btn.ghost { background:var(--card2); border:1px solid var(--line); }
+  .btn:active { transform:translateY(1px); }
+  .btn[disabled] { opacity:.45; }
+  .stack { display:flex; flex-direction:column; gap:12px; }
+  .or { text-align:center; color:var(--faint); font-size:12px; margin:4px 0; }
+  .code-in { text-align:center; letter-spacing:8px; font-family:var(--mono); text-transform:uppercase; font-size:22px; }
+
+  .screen { display:none; }
+  .screen.on { display:block; }
+
+  /* Lobby */
+  .codebox { text-align:center; margin:10px 0 20px; }
+  .codebox .k { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); }
+  .codebox .c { font-family:var(--mono); font-weight:800; font-size:48px; letter-spacing:8px; color:var(--spark);
+    text-shadow:0 0 24px rgba(255,201,61,.4); }
+  .players { display:flex; flex-direction:column; gap:8px; margin:16px 0; }
+  .pchip { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:12px 14px; font-weight:600; }
+  .pchip .dot { width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); }
+  .pchip.holder { border-color:var(--spark); box-shadow:0 0 16px rgba(255,201,61,.25); }
+  .pchip .badge { margin-left:auto; font-size:11px; color:var(--spark); font-weight:800; }
+  .pchip .me { margin-left:auto; font-size:11px; color:var(--violet-soft); font-weight:800; }
+
+  /* Game */
+  .chainline { text-align:center; margin:6px 0 16px; }
+  .chainline .v { font-family:var(--mono); font-weight:800; font-size:40px; color:var(--spark); font-variant-numeric:tabular-nums; }
+  .chainline .k { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); }
+
+  .timer { text-align:center; margin-bottom:14px; }
+  .timer .num { font-family:var(--mono); font-weight:800; font-size:26px; font-variant-numeric:tabular-nums; }
+  .tbar { height:10px; background:#241d42; border-radius:999px; overflow:hidden; margin-top:8px; }
+  .tbar > i { display:block; height:100%; width:100%; border-radius:999px; background:linear-gradient(90deg,var(--green),#e7d54a); }
+  .tbar.low > i { background:linear-gradient(90deg,#ff9f43,var(--danger)); }
+
+  .state { text-align:center; font-weight:900; font-size:22px; margin:18px 0 8px; min-height:28px; }
+  .sub { text-align:center; color:var(--muted); font-size:14px; min-height:20px; margin-bottom:10px; }
+
+  .hold { border-radius:22px; padding:18px; text-align:center; background:radial-gradient(300px 160px at 50% 30%,#3a2f10,transparent), var(--card);
+    border:1px solid var(--spark); box-shadow:0 0 30px rgba(255,201,61,.3); margin-bottom:14px; }
+  .hold .big { font-size:22px; font-weight:900; color:var(--spark); }
+  .passgrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .passbtn { background:var(--violet); color:#fff; border:0; border-radius:14px; padding:16px 10px; font-weight:800; font-size:16px; cursor:pointer;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .passbtn:active { transform:scale(.97); }
+
+  .waiting { border-radius:22px; padding:26px 18px; text-align:center; background:var(--card); border:1px solid var(--line); }
+  .waiting .who { font-size:24px; font-weight:900; }
+  .waiting .who b { color:var(--spark); }
+  body.myturn .waiting { display:none; }
+
+  .toast { text-align:center; margin-top:16px; font-size:14px; color:var(--muted); min-height:20px; }
+  .doom { text-align:center; margin-top:14px; font-size:20px; font-weight:900; color:var(--danger); min-height:26px; }
+  .link { text-align:center; margin-top:22px; font-size:12px; }
+  .link a { color:var(--violet-soft); }
+  :focus-visible { outline:2px solid var(--violet-soft); outline-offset:2px; }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important;} }
+  @keyframes flashRed { 0%,100%{background:transparent} 50%{background:rgba(255,77,109,.25)} }
+  .redflash { position:fixed; inset:0; pointer-events:none; animation:flashRed .5s ease; z-index:5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">CHAÎNE HUMAINE 😼</div>
+  <div class="tag">refile l'étincelle ou t'es cramé</div>
+
+  <!-- 1. Accueil -->
+  <div class="screen on" id="home">
+    <div class="stack">
+      <input id="name" placeholder="Ton blaze" maxlength="18" autocomplete="off" />
+      <button class="btn primary" id="createBtn">Créer un salon</button>
+      <div class="or">— ou rejoins tes potes —</div>
+      <input id="code" class="code-in" placeholder="CODE" maxlength="4" autocomplete="off" />
+      <button class="btn ghost" id="joinBtn">Rejoindre</button>
+    </div>
+    <div class="toast" id="homeErr"></div>
+  </div>
+
+  <!-- 2. Lobby -->
+  <div class="screen" id="lobby">
+    <div class="codebox">
+      <div class="k">Code du salon</div>
+      <div class="c" id="lobbyCode">····</div>
+    </div>
+    <div class="sub">Partage ce code. Tout le monde ouvre cette page et le tape.</div>
+    <div class="players" id="lobbyPlayers"></div>
+    <button class="btn primary" id="startBtn" disabled>Démarrer (hôte)</button>
+    <div class="toast" id="lobbyMsg"></div>
+  </div>
+
+  <!-- 3. Jeu -->
+  <div class="screen" id="play">
+    <div class="chainline"><div class="v" id="chain">0</div><div class="k">passes d'affilée · record <span id="best">0</span></div></div>
+    <div class="timer">
+      <div class="num" id="tnum">—</div>
+      <div class="tbar" id="tbar"><i id="tfill"></i></div>
+    </div>
+
+    <div class="hold" id="holdCard" style="display:none">
+      <div class="big">✨ TU AS L'ÉTINCELLE</div>
+      <div class="sub" style="margin-top:6px">refile-la VITE à quelqu'un 👇</div>
+      <div class="passgrid" id="passGrid"></div>
+    </div>
+
+    <div class="waiting" id="waitCard">
+      <div class="who" id="whoHolds">…</div>
+      <div class="sub" style="margin-top:8px">tiens-toi prêt, ça peut te tomber dessus</div>
+    </div>
+
+    <div class="doom" id="doom"></div>
+    <div class="toast" id="playMsg"></div>
+  </div>
+
+  <div class="link"><a href="/">← retour au mode chaîne mondiale</a></div>
+</div>
+
+<script>
+const API = "";
+let playerId = null, code = null, isHost = false;
+let seenLoss = null, wasMine = false, lastHolder = null;
+const $ = (id) => document.getElementById(id);
+
+function say(txt) {
+  try { const u = new SpeechSynthesisUtterance(txt); u.lang = "fr-FR"; u.rate = 1.05; u.pitch = .9;
+    speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+}
+function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+function show(id) { document.querySelectorAll(".screen").forEach((s) => s.classList.remove("on")); $(id).classList.add("on"); }
+
+async function post(path, body) {
+  const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "erreur réseau");
+  return j;
+}
+
+$("createBtn").onclick = async () => {
+  const name = $("name").value.trim() || "Hôte";
+  say(" "); // débloque la voix (geste utilisateur)
+  try {
+    const r = await post("/api/room/create", { name });
+    playerId = r.playerId; code = r.code; isHost = true;
+    enterLobby(r.room);
+  } catch (e) { $("homeErr").textContent = "❌ " + e.message; }
+};
+$("joinBtn").onclick = async () => {
+  const name = $("name").value.trim() || "Pote";
+  const c = $("code").value.trim().toUpperCase();
+  if (c.length < 4) { $("homeErr").textContent = "Tape le code à 4 lettres."; return; }
+  say(" ");
+  try {
+    const r = await post("/api/room/join", { code: c, name });
+    playerId = r.playerId; code = r.code; isHost = false;
+    enterLobby(r.room);
+  } catch (e) { $("homeErr").textContent = "❌ " + e.message; }
+};
+
+function enterLobby(room) {
+  show("lobby");
+  $("lobbyCode").textContent = room.code;
+  $("startBtn").style.display = isHost ? "block" : "none";
+  renderLobby(room);
+  startPolling();
+}
+function renderLobby(room) {
+  const el = $("lobbyPlayers"); el.innerHTML = "";
+  room.players.forEach((p) => {
+    const d = document.createElement("div"); d.className = "pchip";
+    d.innerHTML = `<span class="dot"></span><span>${p.name}</span>` + (p.isMe ? `<span class="me">toi</span>` : "");
+    el.appendChild(d);
+  });
+  $("startBtn").disabled = room.players.length < 2;
+  $("lobbyMsg").textContent = isHost
+    ? (room.players.length < 2 ? "en attente d'au moins 1 pote…" : "prêt ! clique Démarrer")
+    : "en attente que l'hôte démarre…";
+}
+
+$("startBtn").onclick = async () => {
+  try { await post("/api/room/start", { code, playerId }); }
+  catch (e) { $("lobbyMsg").textContent = "❌ " + e.message; }
+};
+
+async function tick() {
+  if (!code) return;
+  let room;
+  try { room = await fetch(`${API}/api/room/state?code=${code}&playerId=${playerId}`).then((r) => r.json()); }
+  catch (e) { return; }
+  if (room.error) return;
+
+  if (!room.started) { renderLobby(room); return; }
+  if ($("play").classList.contains("on") === false) show("play");
+
+  // --- perte : quelqu'un s'est fait cramer ---
+  if (room.lastLoss && room.lastLoss.id !== seenLoss) {
+    seenLoss = room.lastLoss.id;
+    if (room.lastLoss.playerId === playerId) {
+      say("ta mère le chat");           // 😼 la sanction, pour le maillon cramé
+      vibrate([120, 80, 200]);
+      redFlash(); document.body.classList.add("doomed");
+      $("doom").textContent = `😼 CRAMÉ — tu as lâché une chaîne de ${room.lastLoss.brokeAt}`;
+      setTimeout(() => document.body.classList.remove("doomed"), 900);
+    } else {
+      $("doom").textContent = `🔥 ${room.lastLoss.name} s'est fait cramer (chaîne ${room.lastLoss.brokeAt})`;
+    }
+    setTimeout(() => { if (room.lastLoss.id === seenLoss) $("doom").textContent = ""; }, 3000);
+  }
+
+  // --- chrono ---
+  $("chain").textContent = room.chain;
+  $("best").textContent = room.best;
+  const s = room.secondsLeft ?? 0;
+  $("tnum").textContent = s.toFixed(1) + "s";
+  const frac = Math.max(0, Math.min(1, s / room.deadline));
+  $("tfill").style.width = (frac * 100) + "%";
+  $("tbar").classList.toggle("low", frac < 0.4);
+
+  // --- qui tient l'étincelle ---
+  document.body.classList.toggle("myturn", room.isMine);
+  if (room.isMine) {
+    $("holdCard").style.display = "block";
+    if (!wasMine) { vibrate([90, 40, 90]); say("à toi"); } // ça vient de te tomber dessus
+    renderPass(room);
+  } else {
+    $("holdCard").style.display = "none";
+    $("whoHolds").innerHTML = `✨ chez <b>${room.holderName || "?"}</b>`;
+  }
+  wasMine = room.isMine;
+}
+
+function renderPass(room) {
+  const grid = $("passGrid");
+  const others = room.players.filter((p) => !p.isMe);
+  // ne re-render que si la liste change (évite de casser les taps)
+  if (grid.dataset.sig === others.map((p) => p.id).join(",")) return;
+  grid.dataset.sig = others.map((p) => p.id).join(",");
+  grid.innerHTML = "";
+  others.forEach((p) => {
+    const b = document.createElement("button"); b.className = "passbtn"; b.textContent = "→ " + p.name;
+    b.onclick = async () => {
+      try { await post("/api/room/pass", { code, playerId, toId: p.id }); vibrate(30); tick(); }
+      catch (e) { $("playMsg").textContent = "❌ " + e.message; }
+    };
+    grid.appendChild(b);
+  });
+}
+
+function redFlash() {
+  const el = document.createElement("div"); el.className = "redflash";
+  document.body.appendChild(el); setTimeout(() => el.remove(), 500);
+}
+
+let pollTimer = null;
+function startPolling() { if (pollTimer) return; pollTimer = setInterval(tick, 500); tick(); }
+</script>
+</body>
+</html>

@@ -184,6 +184,111 @@ if (process.env.RELAIS_NO_BOTS !== "1") {
   }, 900);
 }
 
+// ============================================================================
+// MODE « CHAÎNE HUMAINE » — le relais devient LITTÉRAL (hot-potato entre potes)
+// ----------------------------------------------------------------------------
+// Des potes rejoignent un salon (code à 4 lettres). L'étincelle passe de main
+// en main : quand tu la reçois, tu dois la refiler à un autre AVANT la fin du
+// chrono, sinon la chaîne casse et c'est TOI le maillon cramé -> ton écran te
+// dit « ta mère le chat » 😼. Jouable au navigateur (pas besoin d'app native).
+// ============================================================================
+const HOT_SEC = Number(process.env.HOT_POTATO_SEC || 5);
+const rooms = new Map(); // code -> room
+
+const pid = () => Math.random().toString(36).slice(2, 10);
+function newRoomCode() {
+  let c;
+  do { c = Math.random().toString(36).replace(/[^a-z]/gi, "").slice(0, 4).toUpperCase(); }
+  while (c.length < 4 || rooms.has(c));
+  return c;
+}
+
+function roomView(room, playerId) {
+  return {
+    code: room.code,
+    started: room.started,
+    chain: room.chain,
+    best: room.best,
+    hostId: room.hostId,
+    holderId: room.holderId,
+    holderName: room.holderId ? room.players.get(room.holderId)?.name || null : null,
+    isMine: room.holderId === playerId,
+    secondsLeft: room.firesAt ? Math.max(0, (room.firesAt - Date.now()) / 1000) : null,
+    deadline: HOT_SEC,
+    players: [...room.players.entries()].map(([id, p]) => ({ id, name: p.name, isHolder: id === room.holderId, isMe: id === playerId })),
+    lastLoss: room.lastLoss, // { id, playerId, name, brokeAt }
+  };
+}
+
+function armTimer(room) {
+  clearTimeout(room.timer);
+  room.firesAt = Date.now() + HOT_SEC * 1000;
+  room.timer = setTimeout(() => onTimeout(room), HOT_SEC * 1000);
+}
+function onTimeout(room) {
+  const loserId = room.holderId;
+  const broke = room.chain;
+  room.chain = 0;
+  room.lastLoss = { id: pid(), playerId: loserId, name: room.players.get(loserId)?.name || "?", brokeAt: broke };
+  console.log(`[humaine] ${room.code} : ${room.lastLoss.name} s'est fait cramer (chaîne ${broke})`);
+  // l'étincelle repart chez un autre au hasard pour relancer tout de suite
+  const others = [...room.players.keys()].filter((id) => id !== loserId);
+  room.holderId = others.length ? others[Math.floor(Math.random() * others.length)] : loserId;
+  armTimer(room);
+}
+
+app.post("/api/room/create", (req, res) => {
+  const name = (req.body?.name || "Hôte").toString().slice(0, 18);
+  const code = newRoomCode();
+  const id = pid();
+  const room = { code, players: new Map([[id, { name }]]), hostId: id, holderId: null,
+    started: false, chain: 0, best: 0, firesAt: null, timer: null, lastLoss: null };
+  rooms.set(code, room);
+  console.log(`[humaine] salon ${code} créé par ${name}`);
+  res.json({ code, playerId: id, room: roomView(room, id) });
+});
+
+app.post("/api/room/join", (req, res) => {
+  const code = (req.body?.code || "").toString().toUpperCase().trim();
+  const name = (req.body?.name || "Pote").toString().slice(0, 18);
+  const room = rooms.get(code);
+  if (!room) return res.status(404).json({ error: "salon introuvable" });
+  const id = pid();
+  room.players.set(id, { name });
+  res.json({ code, playerId: id, room: roomView(room, id) });
+});
+
+app.post("/api/room/start", (req, res) => {
+  const room = rooms.get((req.body?.code || "").toUpperCase());
+  if (!room) return res.status(404).json({ error: "salon introuvable" });
+  if (req.body?.playerId !== room.hostId) return res.status(403).json({ error: "seul l'hôte peut lancer" });
+  if (room.players.size < 2) return res.status(400).json({ error: "il faut au moins 2 joueurs" });
+  room.started = true;
+  room.chain = 0;
+  room.holderId = room.hostId;
+  armTimer(room);
+  res.json({ ok: true, room: roomView(room, req.body.playerId) });
+});
+
+app.post("/api/room/pass", (req, res) => {
+  const room = rooms.get((req.body?.code || "").toUpperCase());
+  if (!room) return res.status(404).json({ error: "salon introuvable" });
+  const { playerId, toId } = req.body || {};
+  if (room.holderId !== playerId) return res.status(409).json({ error: "tu n'as pas l'étincelle" });
+  if (!room.players.has(toId) || toId === playerId) return res.status(400).json({ error: "destinataire invalide" });
+  room.chain += 1;
+  room.best = Math.max(room.best, room.chain);
+  room.holderId = toId;
+  armTimer(room);
+  res.json({ ok: true, room: roomView(room, playerId) });
+});
+
+app.get("/api/room/state", (req, res) => {
+  const room = rooms.get((req.query?.code || "").toUpperCase());
+  if (!room) return res.status(404).json({ error: "salon introuvable" });
+  res.json(roomView(room, req.query?.playerId));
+});
+
 app.listen(PORT, () => {
-  console.log(`RELAIS ✨ sur http://localhost:${PORT}`);
+  console.log(`RELAIS ✨ sur http://localhost:${PORT} (hot-potato ${HOT_SEC}s)`);
 });
