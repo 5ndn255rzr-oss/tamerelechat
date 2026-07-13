@@ -31,6 +31,13 @@ const SOUNDS = new Set([
 ]);
 const DEFAULT_SOUND = "snd_tamerelechat.caf";
 
+// Effet "alarme" : sans l'entitlement Critical Alerts on ne peut pas forcer le
+// volume ni percer le mode Silence physique. On compense en répétant la notif
+// plusieurs fois d'affilée (son + vibration + bannière à chaque coup).
+const SANCTION_REPEAT = Number(process.env.SANCTION_REPEAT || 4);
+const SANCTION_INTERVAL_MS = Number(process.env.SANCTION_INTERVAL_MS || 2000);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // État en mémoire (suffisant pour 2 téléphones ; réinitialisé au redémarrage).
 const devices = new Map(); // name -> { token, updatedAt }
 const pending = new Map(); // targetName -> { timeout, from, firesAt }
@@ -116,13 +123,16 @@ app.post("/poke", async (req, res) => {
     pending.delete(target);
     const dev = devices.get(target);
     if (!dev) return;
-    console.log(`[sanction] ${target} n'a pas répondu -> son 🔊`);
-    await sendPush(dev.token, {
-      title: "😼",
-      body: "trop tard...",
-      sound,
-      data: { type: "sanction" },
-    });
+    console.log(`[sanction] ${target} n'a pas répondu -> rafale ${SANCTION_REPEAT}× 🔊`);
+    for (let i = 0; i < SANCTION_REPEAT; i++) {
+      await sendPush(dev.token, {
+        title: i === 0 ? "😼 TROP TARD" : "😼",
+        body: SANCTION_REPEAT > 1 ? `réveille-toi ! (${i + 1}/${SANCTION_REPEAT})` : "trop tard...",
+        sound,
+        data: { type: "sanction" },
+      });
+      if (i < SANCTION_REPEAT - 1) await sleep(SANCTION_INTERVAL_MS);
+    }
   }, DEADLINE_SEC * 1000);
 
   pending.set(target, { timeout, from, firesAt, sound });
