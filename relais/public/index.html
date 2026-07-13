@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>RELAIS ✨</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#12101a; --card:#1e1b2e; --line:#332e4a; --accent:#6c5ce7; --green:#27ae60; --gold:#f1c40f; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -10%, #241f3a, var(--bg));
+    color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center; min-height: 100%;
+    overflow-x: hidden; user-select: none;
+  }
+  .wrap { width: 100%; max-width: 460px; padding: 16px; }
+  h1 { font-size: 30px; font-weight: 900; letter-spacing: 1px; text-align: center; margin-bottom: 2px; }
+  h1 small { display:block; font-size:12px; font-weight:600; color:#9a92c0; letter-spacing:2px; margin-top:4px; }
+
+  /* --- Join --- */
+  #join { display:flex; flex-direction:column; gap:12px; margin-top:40px; }
+  input, select {
+    background: var(--card); color:#fff; border:1px solid var(--line);
+    border-radius:14px; padding:15px; font-size:17px; width:100%;
+  }
+  button.primary {
+    background: var(--accent); color:#fff; border:0; border-radius:16px;
+    padding:17px; font-size:18px; font-weight:800; width:100%; cursor:pointer;
+  }
+  button.primary:active { transform: scale(.98); }
+
+  /* --- HUD --- */
+  #game { display:none; }
+  .chainbox { text-align:center; margin: 6px 0 14px; }
+  .chainlabel { font-size:12px; letter-spacing:2px; color:#9a92c0; text-transform:uppercase; }
+  .chainval { font-size:52px; font-weight:900; line-height:1; color: var(--gold); text-shadow:0 0 24px rgba(241,196,15,.35); }
+  .chainsub { font-size:12px; color:#8a83ad; margin-top:4px; min-height:15px; }
+
+  .rankrow { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:12px 14px; margin-bottom:14px; }
+  .badge { font-size:13px; font-weight:900; padding:5px 10px; border-radius:999px; background:#2b2743; border:1px solid var(--line); }
+  .mult { margin-left:auto; font-weight:900; font-size:18px; color:var(--gold); }
+  .xpbar { height:7px; background:#2b2743; border-radius:999px; overflow:hidden; margin-top:2px; }
+  .xpfill { height:100%; background:linear-gradient(90deg,var(--accent),#a29bfe); width:0%; transition:width .25s; }
+  .rankmeta { flex:1; }
+  .rankmeta .top { display:flex; justify-content:space-between; font-size:12px; color:#9a92c0; margin-bottom:5px; }
+
+  /* --- Skill bar --- */
+  #arena { position:relative; height:200px; border-radius:20px; background:var(--card);
+    border:1px solid var(--line); margin-bottom:8px; overflow:hidden; cursor:pointer; }
+  #arena.hit { animation: pop .18s; }
+  #arena.miss { animation: shake .3s; }
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.015)} 100%{transform:scale(1)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  .track { position:absolute; top:50%; left:5%; right:5%; height:26px; transform:translateY(-50%);
+    background:#151226; border-radius:999px; border:1px solid var(--line); }
+  .zone { position:absolute; top:0; bottom:0; background:linear-gradient(180deg,#2ecc71,#27ae60);
+    border-radius:999px; box-shadow:0 0 18px rgba(46,204,113,.5); }
+  .needle { position:absolute; top:-9px; bottom:-9px; width:5px; background:#fff; border-radius:3px;
+    box-shadow:0 0 12px #fff; transform:translateX(-2.5px); }
+  .arena-hint { position:absolute; bottom:12px; width:100%; text-align:center; font-size:13px; color:#8a83ad; }
+  .arena-big { position:absolute; top:18px; width:100%; text-align:center; font-size:15px; font-weight:800; color:#fff; }
+  .float { position:absolute; font-weight:900; font-size:22px; pointer-events:none; animation: floatUp .8s ease-out forwards; }
+  @keyframes floatUp { from{opacity:1; transform:translateY(0)} to{opacity:0; transform:translateY(-46px)} }
+
+  /* --- Leaderboards --- */
+  .boards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .board { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:12px; }
+  .board h3 { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#9a92c0; margin-bottom:8px; }
+  .row { display:flex; font-size:13px; padding:4px 0; border-bottom:1px solid #262138; }
+  .row:last-child { border-bottom:0; }
+  .row .n { width:18px; color:#8a83ad; }
+  .row .nm { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .sc { color:var(--gold); font-weight:800; }
+  .row.mine { color:#fff; }
+  .row.mine .nm { color:#a29bfe; font-weight:800; }
+  .online { text-align:center; font-size:12px; color:#8a83ad; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>RELAIS ✨<small>NE LÂCHE PAS LA CHAÎNE</small></h1>
+
+  <!-- Écran d'entrée -->
+  <div id="join">
+    <input id="name" placeholder="Ton blaze" maxlength="20" />
+    <select id="city">
+      <option value="Nanterre">Nanterre</option>
+      <option value="Courbevoie">Courbevoie</option>
+      <option value="Paris">Paris</option>
+      <option value="Lyon">Lyon</option>
+      <option value="Marseille">Marseille</option>
+      <option value="Lille">Lille</option>
+      <option value="Toulouse">Toulouse</option>
+    </select>
+    <select id="country">
+      <option value="France">France</option>
+      <option value="Belgique">Belgique</option>
+      <option value="Suisse">Suisse</option>
+      <option value="Canada">Canada</option>
+      <option value="Sénégal">Sénégal</option>
+    </select>
+    <button class="primary" id="joinBtn">Entrer dans la chaîne</button>
+  </div>
+
+  <!-- Jeu -->
+  <div id="game">
+    <div class="chainbox">
+      <div class="chainlabel">Chaîne mondiale</div>
+      <div class="chainval" id="chainVal">0</div>
+      <div class="chainsub" id="chainSub">record : 0</div>
+    </div>
+
+    <div class="rankrow">
+      <span class="badge" id="tierBadge">Bronze</span>
+      <div class="rankmeta">
+        <div class="top"><span id="tierNext">→ Argent</span><span id="streakTxt">série 0</span></div>
+        <div class="xpbar"><div class="xpfill" id="xpFill"></div></div>
+      </div>
+      <span class="mult" id="multTxt">×1</span>
+    </div>
+
+    <div id="arena">
+      <div class="arena-big" id="arenaBig">Tape quand le trait passe dans le vert</div>
+      <div class="track" id="track">
+        <div class="zone" id="zone"></div>
+        <div class="needle" id="needle"></div>
+      </div>
+      <div class="arena-hint">clic / espace / touch — plus ton rang monte, plus c'est serré</div>
+    </div>
+
+    <div class="boards">
+      <div class="board">
+        <h3>🏙️ Villes</h3>
+        <div id="cityBoard"></div>
+      </div>
+      <div class="board">
+        <h3>🌍 Pays</h3>
+        <div id="countryBoard"></div>
+      </div>
+    </div>
+    <div class="online" id="online"></div>
+  </div>
+</div>
+
+<script>
+const API = ""; // même origine
+let playerId = null;
+let me = null;
+let diff = { sweep: 1, zone: 0.30 };
+
+// --- état de l'aiguille ---
+let needlePos = 0;      // 0..1
+let dir = 1;
+let zoneStart = 0.35;   // fraction
+let lastTs = 0;
+let locked = false;     // anti double-tap pendant l'anim
+
+const $ = (id) => document.getElementById(id);
+
+async function post(path, body) {
+  const r = await fetch(API + path, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "err");
+  return r.json();
+}
+
+// --- rejoindre ---
+$("joinBtn").onclick = async () => {
+  const name = $("name").value.trim() || "Anonyme";
+  const city = $("city").value, country = $("country").value;
+  const res = await post("/api/join", { name, city, country });
+  playerId = res.playerId;
+  applyMe(res.me);
+  $("join").style.display = "none";
+  $("game").style.display = "block";
+  newZone();
+  requestAnimationFrame(loop);
+  poll(); setInterval(poll, 1200);
+};
+
+function applyMe(m) {
+  me = m;
+  diff = m.difficulty;
+  $("tierBadge").textContent = m.tier;
+  $("multTxt").textContent = "×" + m.mult;
+  $("streakTxt").textContent = "série " + m.streak;
+  $("tierNext").textContent = m.nextTier ? `→ ${m.nextTier.name} (${m.nextTier.xpNeeded})` : "MAX 👑";
+  // progression d'XP dans le palier courant (approx visuelle)
+  const pct = m.nextTier ? Math.min(100, 100 - (m.nextTier.xpNeeded / (m.nextTier.xpNeeded + m.xp + 1)) * 100) : 100;
+  $("xpFill").style.width = Math.max(4, pct) + "%";
+}
+
+function newZone() {
+  const w = diff.zone;
+  zoneStart = Math.random() * (1 - w);
+  $("zone").style.left = (zoneStart * 100) + "%";
+  $("zone").style.width = (w * 100) + "%";
+}
+
+// --- boucle d'animation de l'aiguille ---
+function loop(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = (ts - lastTs) / 1000; lastTs = ts;
+  // période de base 1.5s pour un aller ; accélérée par sweep
+  const speed = (1 / 1.5) * diff.sweep;
+  needlePos += dir * speed * dt;
+  if (needlePos >= 1) { needlePos = 1; dir = -1; }
+  if (needlePos <= 0) { needlePos = 0; dir = 1; }
+  $("needle").style.left = (needlePos * 100) + "%";
+  requestAnimationFrame(loop);
+}
+
+// --- tenter une passe ---
+async function attempt() {
+  if (!playerId || locked) return;
+  const inZone = needlePos >= zoneStart && needlePos <= zoneStart + diff.zone;
+  locked = true;
+  try {
+    if (inZone) {
+      const r = await post("/api/pass", { playerId });
+      flash("hit");
+      floatText("+" + r.gained, "#2ecc71");
+      $("chainVal").textContent = r.chain;
+      applyMe(r.me);
+      newZone();
+    } else {
+      const r = await post("/api/break", { playerId });
+      flash("miss");
+      floatText("CASSÉ !", "#e74c3c");
+      $("chainVal").textContent = "0";
+      $("chainSub").textContent = r.brokeAt > 0 ? `tu as cassé une chaîne de ${r.brokeAt} 💀` : "raté";
+      applyMe(r.me);
+      newZone();
+    }
+  } catch (e) { /* ignore réseau */ }
+  setTimeout(() => (locked = false), 120);
+}
+
+function flash(cls) {
+  const a = $("arena");
+  a.classList.add(cls);
+  setTimeout(() => a.classList.remove(cls), 320);
+}
+function floatText(txt, color) {
+  const el = document.createElement("div");
+  el.className = "float"; el.textContent = txt; el.style.color = color;
+  el.style.left = (needlePos * 90 + 5) + "%"; el.style.top = "50%";
+  $("arena").appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+$("arena").addEventListener("click", attempt);
+$("arena").addEventListener("touchstart", (e) => { e.preventDefault(); attempt(); }, { passive: false });
+window.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); attempt(); } });
+
+// --- monde vivant : chaîne + classements ---
+async function poll() {
+  try {
+    const r = await fetch(API + "/api/state?playerId=" + playerId).then((x) => x.json());
+    $("chainVal").textContent = r.chain.current;
+    $("chainSub").textContent = r.chain.lastBreakBy
+      ? `record ${r.chain.best} · dernier crash : ${r.chain.lastBreakBy} (${r.chain.lastBreakCity})`
+      : `record : ${r.chain.best}`;
+    renderBoard($("cityBoard"), r.cities, me?.city, r.myCityRank);
+    renderBoard($("countryBoard"), r.countries, me?.country, r.myCountryRank);
+    $("online").textContent = `⚡ ${r.playersOnline} joueur(s) dans la chaîne · saison en cours`;
+  } catch (e) {}
+}
+
+function renderBoard(el, list, mine, myRank) {
+  el.innerHTML = "";
+  list.forEach((row, i) => {
+    const d = document.createElement("div");
+    d.className = "row" + (row.name === mine ? " mine" : "");
+    d.innerHTML = `<span class="n">${i + 1}</span><span class="nm">${row.name}</span><span class="sc">${row.score}</span>`;
+    el.appendChild(d);
+  });
+  if (mine && myRank && myRank.rank > list.length) {
+    const d = document.createElement("div");
+    d.className = "row mine";
+    d.innerHTML = `<span class="n">${myRank.rank}</span><span class="nm">${mine} (toi)</span><span class="sc">—</span>`;
+    el.appendChild(d);
+  }
+}
+</script>
+</body>
+</html>
