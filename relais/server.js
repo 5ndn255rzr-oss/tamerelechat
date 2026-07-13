@@ -52,31 +52,52 @@ const countries = new Map(); // "Pays" -> { score, passes }
 
 const chain = { current: 0, best: 0, lastBreakBy: null, lastBreakCity: null };
 
-// --- Coordonnées pour la CARTE DE CONQUÊTE (x/y en % sur une carte de France) -
-// x: 0 (ouest) -> 100 (est) ; y: 0 (nord) -> 100 (sud). Approx suffisant pour le proto.
+// --- Coordonnées mondiales pour la CARTE DE CONQUÊTE (latitude / longitude) ----
+// Le client projette (lat,lng) en équirectangulaire sur une vraie carte du monde.
 const CITY_GEO = {
-  "Paris":      { x: 49, y: 30, country: "France" },
-  "Nanterre":   { x: 46, y: 29, country: "France" },
-  "Courbevoie": { x: 47, y: 28, country: "France" },
-  "Lille":      { x: 54, y: 8,  country: "France" },
-  "Lyon":       { x: 66, y: 60, country: "France" },
-  "Marseille":  { x: 71, y: 86, country: "France" },
-  "Toulouse":   { x: 42, y: 82, country: "France" },
-  "Bordeaux":   { x: 30, y: 68, country: "France" },
-  "Nantes":     { x: 25, y: 47, country: "France" },
-  "Strasbourg": { x: 88, y: 30, country: "France" },
-  "Rennes":     { x: 20, y: 38, country: "France" },
-  "Nice":       { x: 82, y: 82, country: "France" },
+  "Paris":        { lat: 48.85, lng: 2.35,   country: "France" },
+  "Londres":      { lat: 51.50, lng: -0.13,  country: "Royaume-Uni" },
+  "Berlin":       { lat: 52.52, lng: 13.40,  country: "Allemagne" },
+  "Madrid":       { lat: 40.42, lng: -3.70,  country: "Espagne" },
+  "Rome":         { lat: 41.90, lng: 12.50,  country: "Italie" },
+  "Bruxelles":    { lat: 50.85, lng: 4.35,   country: "Belgique" },
+  "Genève":       { lat: 46.20, lng: 6.14,   country: "Suisse" },
+  "Lisbonne":     { lat: 38.72, lng: -9.14,  country: "Portugal" },
+  "Moscou":       { lat: 55.75, lng: 37.62,  country: "Russie" },
+  "Istanbul":     { lat: 41.01, lng: 28.98,  country: "Turquie" },
+  "Le Caire":     { lat: 30.04, lng: 31.24,  country: "Égypte" },
+  "Lagos":        { lat: 6.52,  lng: 3.38,   country: "Nigeria" },
+  "Dakar":        { lat: 14.72, lng: -17.47, country: "Sénégal" },
+  "Abidjan":      { lat: 5.35,  lng: -4.00,  country: "Côte d'Ivoire" },
+  "Nairobi":      { lat: -1.29, lng: 36.82,  country: "Kenya" },
+  "Johannesburg": { lat: -26.20, lng: 28.04, country: "Afrique du Sud" },
+  "Dubaï":        { lat: 25.20, lng: 55.27,  country: "Émirats" },
+  "Mumbai":       { lat: 19.08, lng: 72.88,  country: "Inde" },
+  "Delhi":        { lat: 28.61, lng: 77.21,  country: "Inde" },
+  "Bangkok":      { lat: 13.76, lng: 100.50, country: "Thaïlande" },
+  "Singapour":    { lat: 1.35,  lng: 103.82, country: "Singapour" },
+  "Pékin":        { lat: 39.90, lng: 116.40, country: "Chine" },
+  "Shanghai":     { lat: 31.23, lng: 121.47, country: "Chine" },
+  "Séoul":        { lat: 37.57, lng: 126.98, country: "Corée" },
+  "Tokyo":        { lat: 35.68, lng: 139.65, country: "Japon" },
+  "Sydney":       { lat: -33.87, lng: 151.21, country: "Australie" },
+  "São Paulo":    { lat: -23.55, lng: -46.63, country: "Brésil" },
+  "Buenos Aires": { lat: -34.60, lng: -58.38, country: "Argentine" },
+  "Mexico":       { lat: 19.43, lng: -99.13, country: "Mexique" },
+  "New York":     { lat: 40.71, lng: -74.00, country: "USA" },
+  "Los Angeles":  { lat: 34.05, lng: -118.24, country: "USA" },
+  "Montréal":     { lat: 45.50, lng: -73.57, country: "Canada" },
 };
 
 // Rivaux de départ : la carte/les classements ne sont jamais vides.
 function seedRivals() {
   const seed = [
-    ["Paris", 2300], ["Courbevoie", 1800], ["Lyon", 1600], ["Marseille", 1250],
-    ["Lille", 950], ["Toulouse", 1100], ["Bordeaux", 700], ["Nantes", 640],
-    ["Strasbourg", 520], ["Nice", 810], ["Rennes", 430],
+    ["Paris", 2300], ["Londres", 2100], ["New York", 1950], ["Tokyo", 1800],
+    ["Shanghai", 1700], ["Lagos", 1250], ["São Paulo", 1400], ["Mumbai", 1300],
+    ["Bruxelles", 950], ["Dakar", 820], ["Sydney", 760], ["Mexico", 1100],
+    ["Le Caire", 690], ["Istanbul", 880], ["Séoul", 940],
   ];
-  for (const [city, score] of seed) bumpTerritory(city, "France", score);
+  for (const [city, score] of seed) bumpTerritory(city, CITY_GEO[city].country, score);
 }
 
 // --- SAISONS -----------------------------------------------------------------
@@ -227,7 +248,7 @@ app.get("/api/map", (_req, res) => {
   const nodes = Object.entries(CITY_GEO).map(([name, geo]) => {
     const c = cities.get(name);
     return {
-      name, x: geo.x, y: geo.y, country: geo.country,
+      name, lat: geo.lat, lng: geo.lng, country: geo.country,
       score: c?.score || 0,
       intensity: c ? c.score / maxScore : 0, // 0..1 pour la taille/opacité
       leader: name === top,
@@ -249,15 +270,12 @@ app.get("/health", (_req, res) => res.send("relais ok ✨"));
 // --- Monde vivant : des "bots" d'autres villes jouent en continu --------------
 // Illustre le pilier « le jeu tourne même sans toi » : la carte bouge toute
 // seule, les villes rivales grimpent, la chaîne progresse — sans jamais casser.
-const BOT_CITIES = [
-  ["Courbevoie", "France"], ["Lyon", "France"], ["Marseille", "France"],
-  ["Nanterre", "France"], ["Lille", "France"], ["Toulouse", "France"],
-  ["Bruxelles", "Belgique"], ["Genève", "Suisse"], ["Montréal", "Canada"],
-  ["Dakar", "Sénégal"], ["Abidjan", "Côte d'Ivoire"],
-];
+// Villes rivales du monde entier : la carte s'anime sur tous les continents.
+const BOT_CITIES = Object.keys(CITY_GEO);
 if (process.env.RELAIS_NO_BOTS !== "1") {
   setInterval(() => {
-    const [city, country] = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
+    const city = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
+    const country = CITY_GEO[city].country;
     const mult = [1, 2, 5, 12][Math.floor(Math.random() * 4)];
     bumpTerritory(city, country, BASE_POINTS * mult);
     if (Math.random() < 0.5) {
