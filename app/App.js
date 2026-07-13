@@ -14,6 +14,7 @@ import { StatusBar } from "expo-status-bar";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import Relais from "./Relais";
 
 // >>> À CONFIGURER : l'URL publique de ton serveur (voir README). <<<
 // En test local sur le même wifi : "http://192.168.X.X:3000"
@@ -75,6 +76,7 @@ async function api(path, body) {
 }
 
 export default function App() {
+  const [mode, setMode] = useState(null); // null = choix, "prank" ou "relais"
   const [name, setName] = useState("");
   const [registered, setRegistered] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -136,6 +138,28 @@ export default function App() {
       setBusy(false);
     }
   }
+
+  // --- Choix du mode : le prank d'origine ou le jeu RELAIS ---
+  if (mode === null) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <StatusBar style="light" />
+        <View style={styles.centered}>
+          <Text style={styles.emoji}>😼</Text>
+          <Text style={styles.title}>ta mère le chat</Text>
+          <View style={styles.block}>
+            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={() => setMode("prank")}>
+              <Text style={styles.btnText}>😼 Réveiller un pote</Text>
+            </Pressable>
+            <Pressable style={[styles.btn, styles.btnRelais]} onPress={() => setMode("relais")}>
+              <Text style={styles.btnText}>✨ Jouer à RELAIS</Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  if (mode === "relais") return <Relais goBack={() => setMode(null)} />;
 
   return (
     <SafeAreaView style={styles.root}>
@@ -211,6 +235,7 @@ const styles = StyleSheet.create({
   tileLabel: { color: "#fff", fontSize: 15, fontWeight: "700", textAlign: "center" },
   btn: { padding: 18, borderRadius: 16, alignItems: "center", width: "100%", marginTop: 18 },
   btnPrimary: { backgroundColor: "#6c5ce7" },
+  btnRelais: { backgroundColor: "#f1c40f" },
   btnAck: { backgroundColor: "#27ae60" },
   btnText: { color: "#fff", fontSize: 18, fontWeight: "800" },
   status: { color: "#aaa", fontSize: 15, marginTop: 22, textAlign: "center" },

@@ -46,12 +46,77 @@ function nextTier(xp) {
 const BASE_POINTS = 10; // points d'une passe avant multiplicateur
 
 // --- État --------------------------------------------------------------------
-let seasonStart = Date.now();
 const players = new Map(); // id -> { name, city, country, xp, score, passes, streak, bestStreak }
 const cities = new Map();  // "Ville" -> { country, score, passes }
 const countries = new Map(); // "Pays" -> { score, passes }
 
 const chain = { current: 0, best: 0, lastBreakBy: null, lastBreakCity: null };
+
+// --- Coordonnées pour la CARTE DE CONQUÊTE (x/y en % sur une carte de France) -
+// x: 0 (ouest) -> 100 (est) ; y: 0 (nord) -> 100 (sud). Approx suffisant pour le proto.
+const CITY_GEO = {
+  "Paris":      { x: 49, y: 30, country: "France" },
+  "Nanterre":   { x: 46, y: 29, country: "France" },
+  "Courbevoie": { x: 47, y: 28, country: "France" },
+  "Lille":      { x: 54, y: 8,  country: "France" },
+  "Lyon":       { x: 66, y: 60, country: "France" },
+  "Marseille":  { x: 71, y: 86, country: "France" },
+  "Toulouse":   { x: 42, y: 82, country: "France" },
+  "Bordeaux":   { x: 30, y: 68, country: "France" },
+  "Nantes":     { x: 25, y: 47, country: "France" },
+  "Strasbourg": { x: 88, y: 30, country: "France" },
+  "Rennes":     { x: 20, y: 38, country: "France" },
+  "Nice":       { x: 82, y: 82, country: "France" },
+};
+
+// Rivaux de départ : la carte/les classements ne sont jamais vides.
+function seedRivals() {
+  const seed = [
+    ["Paris", 2300], ["Courbevoie", 1800], ["Lyon", 1600], ["Marseille", 1250],
+    ["Lille", 950], ["Toulouse", 1100], ["Bordeaux", 700], ["Nantes", 640],
+    ["Strasbourg", 520], ["Nice", 810], ["Rennes", 430],
+  ];
+  for (const [city, score] of seed) bumpTerritory(city, "France", score);
+}
+
+// --- SAISONS -----------------------------------------------------------------
+const SEASON_SEC = Number(process.env.SEASON_SEC || 7 * 24 * 3600); // 1 semaine par défaut
+let season = { number: 1, startedAt: Date.now() };
+const hallOfFame = []; // [{ season, topCity, topCountry, chainBest }]
+
+function endSeason() {
+  const tc = leaderboard(cities, 1)[0];
+  const tp = leaderboard(countries, 1)[0];
+  hallOfFame.unshift({
+    season: season.number,
+    topCity: tc?.name || null,
+    topCountry: tp?.name || null,
+    chainBest: chain.best,
+  });
+  if (hallOfFame.length > 10) hallOfFame.pop();
+  console.log(`[saison] fin S${season.number} — 🏆 ${tc?.name || "?"} / ${tp?.name || "?"} (chaîne ${chain.best})`);
+  // reset des territoires + de la chaîne ; les rangs perso (xp) restent acquis.
+  cities.clear();
+  countries.clear();
+  chain.current = 0; chain.best = 0; chain.lastBreakBy = null; chain.lastBreakCity = null;
+  for (const p of players.values()) { p.score = 0; p.streak = 0; }
+  season = { number: season.number + 1, startedAt: Date.now() };
+  seedRivals();
+}
+setInterval(() => {
+  if (Date.now() - season.startedAt >= SEASON_SEC * 1000) endSeason();
+}, 3000);
+
+seedRivals();
+
+function seasonInfo() {
+  return {
+    number: season.number,
+    startedAt: season.startedAt,
+    secondsLeft: Math.max(0, Math.round((season.startedAt + SEASON_SEC * 1000 - Date.now()) / 1000)),
+    durationSec: SEASON_SEC,
+  };
+}
 
 function bumpTerritory(city, country, points) {
   const c = cities.get(city) || { country, score: 0, passes: 0 };
@@ -143,7 +208,8 @@ app.post("/api/break", (req, res) => {
 app.get("/api/state", (req, res) => {
   const me = players.get(req.query?.playerId);
   res.json({
-    seasonStart,
+    season: seasonInfo(),
+    hallOfFame: hallOfFame.slice(0, 3),
     chain,
     playersOnline: players.size,
     cities: leaderboard(cities),
@@ -154,6 +220,22 @@ app.get("/api/state", (req, res) => {
   });
 });
 
+// --- CARTE DE CONQUÊTE : villes géolocalisées + qui mène -----------------------
+app.get("/api/map", (_req, res) => {
+  const top = leaderboard(cities, 1)[0]?.name || null;
+  const maxScore = Math.max(1, ...[...cities.values()].map((c) => c.score));
+  const nodes = Object.entries(CITY_GEO).map(([name, geo]) => {
+    const c = cities.get(name);
+    return {
+      name, x: geo.x, y: geo.y, country: geo.country,
+      score: c?.score || 0,
+      intensity: c ? c.score / maxScore : 0, // 0..1 pour la taille/opacité
+      leader: name === top,
+    };
+  });
+  res.json({ season: seasonInfo(), leader: top, nodes });
+});
+
 function rankOf(map, name) {
   const sorted = [...map.entries()].sort((a, b) => b[1].score - a[1].score);
   const i = sorted.findIndex(([n]) => n === name);
@@ -161,6 +243,7 @@ function rankOf(map, name) {
 }
 
 app.get("/api/tiers", (_req, res) => res.json(TIERS));
+app.get("/api/season", (_req, res) => res.json({ ...seasonInfo(), hallOfFame }));
 app.get("/health", (_req, res) => res.send("relais ok ✨"));
 
 // --- Monde vivant : des "bots" d'autres villes jouent en continu --------------
@@ -190,10 +273,39 @@ if (process.env.RELAIS_NO_BOTS !== "1") {
 // Des potes rejoignent un salon (code à 4 lettres). L'étincelle passe de main
 // en main : quand tu la reçois, tu dois la refiler à un autre AVANT la fin du
 // chrono, sinon la chaîne casse et c'est TOI le maillon cramé -> ton écran te
-// dit « ta mère le chat » 😼. Jouable au navigateur (pas besoin d'app native).
+// dit « ta mère le chat » 😼.
+//
+// Deux façons de jouer :
+//  - WEB (humaine.html) : jouable au navigateur, sanction vocale.
+//  - NATIF (app Expo) : les joueurs enregistrent un token push -> quand
+//    l'étincelle t'arrive, ton iPhone SONNE même verrouillé, et si tu la lâches
+//    la notif de sanction joue le son "ta mère le chat". C'est le vrai délire.
 // ============================================================================
 const HOT_SEC = Number(process.env.HOT_POTATO_SEC || 5);
 const rooms = new Map(); // code -> room
+
+// --- Envoi de notif push via Expo (repris du serveur "ta mère le chat") -------
+const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+const SANCTION_SOUND = "snd_tamerelechat.caf";
+async function sendPush(token, { title, body, sound, data }) {
+  if (!token) return; // joueur web sans token natif : on ignore silencieusement
+  const message = {
+    to: token, title, body,
+    sound: sound || "default",
+    priority: "high",
+    interruptionLevel: sound && sound !== "default" ? "time-sensitive" : "active",
+    data: data || {},
+  };
+  try {
+    await fetch(EXPO_PUSH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(message),
+    });
+  } catch (err) {
+    console.error("[push] échec", err.message);
+  }
+}
 
 const pid = () => Math.random().toString(36).slice(2, 10);
 function newRoomCode() {
@@ -227,34 +339,55 @@ function armTimer(room) {
 }
 function onTimeout(room) {
   const loserId = room.holderId;
+  const loser = room.players.get(loserId);
   const broke = room.chain;
   room.chain = 0;
-  room.lastLoss = { id: pid(), playerId: loserId, name: room.players.get(loserId)?.name || "?", brokeAt: broke };
+  room.lastLoss = { id: pid(), playerId: loserId, name: loser?.name || "?", brokeAt: broke };
   console.log(`[humaine] ${room.code} : ${room.lastLoss.name} s'est fait cramer (chaîne ${broke})`);
+  // 😼 sanction sonore sur le téléphone du maillon cramé (même verrouillé)
+  sendPush(loser?.token, {
+    title: "😼 CRAMÉ",
+    body: `t'as lâché l'étincelle (chaîne de ${broke})... ta mère le chat`,
+    sound: SANCTION_SOUND,
+    data: { type: "sanction", room: room.code },
+  });
   // l'étincelle repart chez un autre au hasard pour relancer tout de suite
   const others = [...room.players.keys()].filter((id) => id !== loserId);
   room.holderId = others.length ? others[Math.floor(Math.random() * others.length)] : loserId;
+  notifyHolder(room);
   armTimer(room);
+}
+
+// Réveille le nouveau porteur : son iPhone sonne, l'étincelle vient de lui tomber dessus.
+function notifyHolder(room) {
+  const h = room.players.get(room.holderId);
+  sendPush(h?.token, {
+    title: "✨ L'ÉTINCELLE EST À TOI",
+    body: `refile-la en moins de ${HOT_SEC}s ou tu crames !`,
+    data: { type: "spark", room: room.code },
+  });
 }
 
 app.post("/api/room/create", (req, res) => {
   const name = (req.body?.name || "Hôte").toString().slice(0, 18);
+  const token = req.body?.token || null; // token push Expo (app native) ou null (web)
   const code = newRoomCode();
   const id = pid();
-  const room = { code, players: new Map([[id, { name }]]), hostId: id, holderId: null,
+  const room = { code, players: new Map([[id, { name, token }]]), hostId: id, holderId: null,
     started: false, chain: 0, best: 0, firesAt: null, timer: null, lastLoss: null };
   rooms.set(code, room);
-  console.log(`[humaine] salon ${code} créé par ${name}`);
+  console.log(`[humaine] salon ${code} créé par ${name}${token ? " 📱" : ""}`);
   res.json({ code, playerId: id, room: roomView(room, id) });
 });
 
 app.post("/api/room/join", (req, res) => {
   const code = (req.body?.code || "").toString().toUpperCase().trim();
   const name = (req.body?.name || "Pote").toString().slice(0, 18);
+  const token = req.body?.token || null;
   const room = rooms.get(code);
   if (!room) return res.status(404).json({ error: "salon introuvable" });
   const id = pid();
-  room.players.set(id, { name });
+  room.players.set(id, { name, token });
   res.json({ code, playerId: id, room: roomView(room, id) });
 });
 
@@ -266,6 +399,7 @@ app.post("/api/room/start", (req, res) => {
   room.started = true;
   room.chain = 0;
   room.holderId = room.hostId;
+  notifyHolder(room);
   armTimer(room);
   res.json({ ok: true, room: roomView(room, req.body.playerId) });
 });
@@ -279,6 +413,7 @@ app.post("/api/room/pass", (req, res) => {
   room.chain += 1;
   room.best = Math.max(room.best, room.chain);
   room.holderId = toId;
+  notifyHolder(room); // 📱 réveille le destinataire : l'étincelle vient de lui tomber dessus
   armTimer(room);
   res.json({ ok: true, room: roomView(room, playerId) });
 });

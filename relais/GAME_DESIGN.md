@@ -71,11 +71,18 @@ Proto **web jouable** validant la boucle complète : défi d'adresse, passe/cass
 rangs + multiplicateurs, chaîne mondiale live, classements Ville & Pays, monde
 vivant (bots d'autres villes). Voir `README.md` pour lancer.
 
+### Déjà en place
+- [x] Boucle chaîne mondiale (défi d'adresse, rangs, difficulté, territoires ville/pays)
+- [x] **Combos** + **Mode Fièvre** collectif + **Couronne** du Porteur d'Étincelle (démo web)
+- [x] **Saisons** : reset auto des territoires, panthéon des gagnants, rangs perso conservés (`/api/season`, `SEASON_SEC`)
+- [x] **Carte de conquête** de l'Hexagone : villes géolocalisées, la #1 s'allume (`/api/map`)
+- [x] **Chaîne Humaine** : hot-potato multijoueur en salon (web + écran natif) — `/api/room/*`
+- [x] **Notifs push natives** : l'étincelle réveille l'iPhone verrouillé du destinataire ;
+      le maillon cramé reçoit la notif sonore « ta mère le chat » (rebranche le moteur push d'origine)
+
 ### Prochaines étapes
 - [ ] Départements / régions (2 étages de plus dans l'agrégation)
-- [ ] Saisons + ligues (montée/descente)
+- [ ] Ligues avec montée/descente (matchs entre villes de taille comparable)
 - [ ] GPS réel à l'inscription (au lieu du menu déroulant)
-- [ ] Persistance (remplacer l'état en mémoire par une vraie base)
+- [ ] Persistance (remplacer l'état en mémoire par une vraie base — Supabase)
 - [ ] Temps réel poussé (WebSocket/SSE au lieu du polling)
-- [ ] Notifs de territoire (branchées sur le relais push existant)
-- [ ] Portage dans l'app Expo native

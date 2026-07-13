@@ -76,6 +76,17 @@
   .row.mine { color:#fff; }
   .row.mine .nm { color:#a29bfe; font-weight:800; }
   .online { text-align:center; font-size:12px; color:#8a83ad; margin-top:14px; }
+  .mapwrap { margin-top:16px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:13px; }
+  .mapwrap h3 { margin:0 0 8px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#9a92c0; }
+  .map { position:relative; width:100%; aspect-ratio:1/1.02; }
+  .map svg { position:absolute; inset:0; width:100%; height:100%; }
+  .dot { position:absolute; transform:translate(-50%,-50%); border-radius:50%; background:#a99bff;
+    box-shadow:0 0 8px rgba(169,155,255,.6); transition:all .4s ease; }
+  .dot.lead { background:var(--gold); box-shadow:0 0 16px rgba(241,196,15,.9); animation:throb 1.4s infinite; z-index:3; }
+  .dot.me { outline:2px solid #fff; outline-offset:1px; }
+  @keyframes throb { 50% { transform:translate(-50%,-50%) scale(1.35); } }
+  .dlabel { position:absolute; transform:translate(-50%,-50%); font-size:9.5px; color:#fff;
+    white-space:nowrap; text-shadow:0 1px 3px #000; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -106,6 +117,7 @@
 
   <!-- Jeu -->
   <div id="game">
+    <div id="seasonLine" style="text-align:center;font-size:12px;color:#9a92c0;margin-bottom:6px"></div>
     <div class="chainbox">
       <div class="chainlabel">Chaîne mondiale</div>
       <div class="chainval" id="chainVal">0</div>
@@ -140,6 +152,16 @@
         <div id="countryBoard"></div>
       </div>
     </div>
+    <div class="mapwrap">
+      <h3>🗺️ Carte de conquête — l'Hexagone</h3>
+      <div class="map" id="map">
+        <svg viewBox="0 0 100 102" preserveAspectRatio="none" aria-hidden="true">
+          <polygon points="50,2 92,26 92,60 68,99 30,99 8,60 8,26"
+            fill="rgba(124,92,255,.06)" stroke="#332e4a" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+
     <div class="online" id="online"></div>
     <div style="text-align:center;margin-top:14px">
       <a href="/humaine.html" style="color:#a99bff;font-size:13px;font-weight:700;text-decoration:none">
@@ -271,7 +293,40 @@ async function poll() {
       : `record : ${r.chain.best}`;
     renderBoard($("cityBoard"), r.cities, me?.city, r.myCityRank);
     renderBoard($("countryBoard"), r.countries, me?.country, r.myCountryRank);
-    $("online").textContent = `⚡ ${r.playersOnline} joueur(s) dans la chaîne · saison en cours`;
+    if (r.season) {
+      const s = r.season, m = Math.floor(s.secondsLeft / 86400);
+      const left = m > 0 ? `${m}j` : `${Math.floor(s.secondsLeft / 3600)}h ${Math.floor((s.secondsLeft % 3600) / 60)}m`;
+      const hof = r.hallOfFame?.[0] ? ` · 🏆 S${r.hallOfFame[0].season} : ${r.hallOfFame[0].topCity}` : "";
+      $("seasonLine").innerHTML = `Saison <b style="color:#a99bff;font-family:monospace">${s.number}</b> · fin dans <b style="color:#a99bff">${left}</b>${hof}`;
+    }
+    $("online").textContent = `⚡ ${r.playersOnline} joueur(s) dans la chaîne`;
+    renderMap();
+  } catch (e) {}
+}
+
+// --- carte de conquête ---
+const CITY_GEO = {
+  "Paris": { x: 49, y: 30 }, "Nanterre": { x: 45, y: 29 }, "Courbevoie": { x: 47, y: 27 },
+  "Lyon": { x: 66, y: 60 }, "Marseille": { x: 71, y: 86 }, "Toulouse": { x: 42, y: 82 },
+  "Lille": { x: 54, y: 9 }, "Bordeaux": { x: 30, y: 68 }, "Nantes": { x: 25, y: 47 },
+  "Strasbourg": { x: 88, y: 30 }, "Rennes": { x: 20, y: 38 }, "Nice": { x: 82, y: 82 },
+};
+async function renderMap() {
+  try {
+    const m = await fetch(API + "/api/map").then((x) => x.json());
+    const map = $("map");
+    map.querySelectorAll(".dot,.dlabel").forEach((e) => e.remove());
+    for (const n of m.nodes) {
+      const size = 8 + n.intensity * 22;
+      const d = document.createElement("div");
+      d.className = "dot" + (n.leader ? " lead" : "") + (n.name === me?.city ? " me" : "");
+      d.style.cssText = `left:${n.x}%;top:${n.y}%;width:${size}px;height:${size}px;opacity:${0.4 + n.intensity * 0.6}`;
+      map.appendChild(d);
+      if (n.leader || n.name === me?.city) {
+        const l = document.createElement("div"); l.className = "dlabel"; l.textContent = n.name;
+        l.style.cssText = `left:${n.x}%;top:${n.y - 5}%`; map.appendChild(l);
+      }
+    }
   } catch (e) {}
 }
 
