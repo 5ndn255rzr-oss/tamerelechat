@@ -47,7 +47,15 @@ function nextTier(xp) {
 const BASE_POINTS = 10; // points d'une passe avant multiplicateur
 
 // --- État --------------------------------------------------------------------
-const players = new Map(); // id -> { name, city, country, xp, score, passes, streak, bestStreak }
+const players = new Map(); // id (session) -> { account, name, city, country, score, passes, streak, ... }
+const accounts = new Map(); // token (durable) -> { name, xp, bestStreak, breaks, offenses, createdAt }
+const newToken = () => Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+
+// --- Anti-triche / anti-sabotage ---------------------------------------------
+const MIN_PASS_MS = 180;        // intervalle mini entre 2 passes (bloque le spam serveur)
+const GRIEF_WINDOW_MS = 30000;  // fenêtre de détection du sabotage
+const GRIEF_TRIP = 3;           // nb de cassures dans la fenêtre -> carton rouge
+const BREAK_PENALTY = 50;       // malus de score par cassure (croissant)
 const cities = new Map();  // "Ville" -> { country, score, passes }
 const countries = new Map(); // "Pays" -> { score, passes }
 
@@ -173,6 +181,7 @@ function buildSnapshot() {
     cities: [...cities.entries()].map(([name, c]) => ({
       name, country: c.country, score: c.score, league: leagueOf.get(name) || 1,
     })),
+    accounts: [...accounts.entries()].map(([token, a]) => ({ token, ...a })),
   };
 }
 function hydrate(snap) {
@@ -181,6 +190,14 @@ function hydrate(snap) {
   for (const c of snap.cities) {
     leagueOf.set(c.name, c.league || 1);
     bumpTerritory(c.name, c.country, c.score); // reconstruit villes/pays/continents
+  }
+  if (Array.isArray(snap.accounts)) {
+    accounts.clear();
+    for (const a of snap.accounts) {
+      const { token, ...rest } = a;
+      accounts.set(token, { name: rest.name, xp: rest.xp || 0, bestStreak: rest.bestStreak || 0,
+        breaks: rest.breaks || 0, offenses: rest.offenses || 0, createdAt: rest.createdAt || Date.now() });
+    }
   }
   if (snap.season) season = snap.season;
   if (Array.isArray(snap.hallOfFame)) { hallOfFame.length = 0; hallOfFame.push(...snap.hallOfFame); }
@@ -269,34 +286,53 @@ function leaderboard(map, n = 6) {
 }
 
 function publicPlayer(p) {
-  const tier = tierFor(p.xp);
-  const nt = nextTier(p.xp);
+  const a = p.account;
+  const tier = tierFor(a.xp);
+  const nt = nextTier(a.xp);
+  const banMs = Math.max(0, p.bannedUntil - Date.now());
+  const denom = a.xp + a.breaks;
   return {
-    name: p.name,
+    name: a.name,
     city: p.city,
     country: p.country,
-    xp: p.xp,
+    xp: a.xp,
     score: p.score,
     passes: p.passes,
     streak: p.streak,
-    bestStreak: p.bestStreak,
+    bestStreak: a.bestStreak,
+    breaks: a.breaks,
+    accuracy: denom ? Math.round((a.xp / denom) * 100) : 100,
+    banned: banMs > 0,
+    bannedFor: Math.ceil(banMs / 1000),
     tier: tier.name,
     mult: tier.mult,
     difficulty: { sweep: tier.sweep, zone: tier.zone },
-    nextTier: nt ? { name: nt.name, xpNeeded: nt.minXp - p.xp } : null,
+    nextTier: nt ? { name: nt.name, xpNeeded: nt.minXp - a.xp } : null,
   };
 }
 
-// --- Un joueur rejoint (choisit / hérite d'un territoire) --------------------
+// --- Un joueur rejoint : compte durable (pseudo + rang gardés entre appareils) -
 app.post("/api/join", (req, res) => {
   const name = (req.body?.name || "Anonyme").toString().slice(0, 20);
   const city = (req.body?.city || "Inconnue").toString().slice(0, 30);
   const country = (req.body?.country || "France").toString().slice(0, 30);
+
+  let token = (req.body?.token || "").toString();
+  let account = token && accounts.get(token);
+  if (account) {
+    account.name = name; // on garde xp/rang/breaks, on rafraîchit juste le pseudo
+  } else {
+    token = newToken();
+    account = { name, xp: 0, bestStreak: 0, breaks: 0, offenses: 0, createdAt: Date.now() };
+    accounts.set(token, account);
+  }
+
   const id = Math.random().toString(36).slice(2, 10);
-  const player = { name, city, country, xp: 0, score: 0, passes: 0, streak: 0, bestStreak: 0 };
+  const player = { account, name, city, country, score: 0, passes: 0, streak: 0,
+    breakTimes: [], bannedUntil: 0, lastPassAt: 0 };
   players.set(id, player);
-  console.log(`[join] ${name} (${city}, ${country}) -> ${id}`);
-  res.json({ playerId: id, me: publicPlayer(player) });
+  console.log(`[join] ${name} (${city}, ${country}) rang ${account.xp}xp -> ${id}`);
+  res.json({ playerId: id, token, me: publicPlayer(player) });
 });
 
 // --- Passe réussie : banque points + XP, allonge la chaîne, nourrit le territoire
@@ -304,13 +340,25 @@ app.post("/api/pass", (req, res) => {
   const p = players.get(req.body?.playerId);
   if (!p) return res.status(404).json({ error: "joueur inconnu (rejoins d'abord)" });
 
-  const tier = tierFor(p.xp);
+  const now = Date.now();
+  // Suspendu (carton anti-sabotage) : ne peut plus marquer.
+  if (p.bannedUntil > now) {
+    return res.status(403).json({ error: "suspendu", bannedFor: Math.ceil((p.bannedUntil - now) / 1000), me: publicPlayer(p) });
+  }
+  // Anti-triche : impossible d'enchaîner les passes plus vite qu'un humain.
+  if (now - p.lastPassAt < MIN_PASS_MS) {
+    return res.status(429).json({ error: "trop rapide", me: publicPlayer(p) });
+  }
+  p.lastPassAt = now;
+
+  const a = p.account;
+  const tier = tierFor(a.xp);
   const gained = BASE_POINTS * tier.mult;
   p.score += gained;
-  p.xp += 1;
+  a.xp += 1;
   p.passes += 1;
   p.streak += 1;
-  if (p.streak > p.bestStreak) p.bestStreak = p.streak;
+  if (p.streak > a.bestStreak) a.bestStreak = p.streak;
 
   bumpTerritory(p.city, p.country, gained);
 
@@ -321,18 +369,51 @@ app.post("/api/pass", (req, res) => {
   broadcastWorld(); // les autres voient ta passe instantanément
 });
 
-// --- Raté : la chaîne mondiale tombe -----------------------------------------
+// --- Raté : la chaîne mondiale tombe + MALUS anti-sabotage --------------------
+// Un raté isolé = petit malus (accident). Mais celui qui casse la chaîne en
+// rafale (sabotage volontaire) prend un malus croissant puis un CARTON ROUGE :
+// pendant sa suspension, ses ratés n'affectent plus le monde (chaîne protégée).
 app.post("/api/break", (req, res) => {
   const p = players.get(req.body?.playerId);
   if (!p) return res.status(404).json({ error: "joueur inconnu" });
 
-  const brokeAt = chain.current;
-  chain.current = 0;
-  chain.lastBreakBy = p.name;
-  chain.lastBreakCity = p.city;
+  const now = Date.now();
+  const a = p.account;
+
+  // Déjà suspendu -> sa cassure est IGNORÉE (le saboteur ne peut plus nuire).
+  if (p.bannedUntil > now) {
+    p.streak = 0;
+    return res.json({ ok: true, ignored: true, chain: chain.current,
+      bannedFor: Math.ceil((p.bannedUntil - now) / 1000), me: publicPlayer(p) });
+  }
+
+  // Fenêtre glissante des cassures récentes.
+  p.breakTimes = p.breakTimes.filter((t) => now - t < GRIEF_WINDOW_MS);
+  p.breakTimes.push(now);
+  a.breaks += 1;
+  const recent = p.breakTimes.length;
+
+  // Malus de score croissant avec les cassures rapprochées.
+  const penalty = BREAK_PENALTY * recent;
+  p.score = Math.max(0, p.score - penalty);
   p.streak = 0;
 
-  res.json({ ok: true, brokeAt, chain: 0, me: publicPlayer(p) });
+  // Carton rouge au-delà du seuil : suspension qui double à chaque récidive.
+  let banSec = 0;
+  if (recent >= GRIEF_TRIP) {
+    a.offenses += 1;
+    banSec = Math.min(120, 10 * 2 ** (a.offenses - 1)); // 10, 20, 40, 80, 120s
+    p.bannedUntil = now + banSec * 1000;
+    p.breakTimes = [];
+    console.log(`[carton] ${a.name} suspendu ${banSec}s (récidive #${a.offenses})`);
+  }
+
+  const brokeAt = chain.current;
+  chain.current = 0;
+  chain.lastBreakBy = a.name;
+  chain.lastBreakCity = p.city;
+
+  res.json({ ok: true, brokeAt, chain: 0, penalty, banSec, bannedFor: banSec, recent, me: publicPlayer(p) });
   broadcastWorld();
 });
 

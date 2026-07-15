@@ -29,6 +29,8 @@
     padding:17px; font-size:18px; font-weight:800; width:100%; cursor:pointer;
   }
   button.primary:active { transform: scale(.98); }
+  .bannote { display:none; margin-top:10px; text-align:center; font-size:13px; font-weight:800; color:#fff;
+    background:linear-gradient(90deg,#e7405f,#ff7a1a); border-radius:12px; padding:9px; }
   .ghostbtn { background:#221c3d; color:#c9c2e8; border:1px solid var(--line); border-radius:14px;
     padding:12px; font-size:14px; font-weight:700; width:100%; cursor:pointer; }
   .ghostbtn:active { transform: scale(.98); }
@@ -143,6 +145,7 @@
       </div>
       <div class="arena-hint">clic / espace / touch — plus ton rang monte, plus c'est serré</div>
     </div>
+    <div id="banNote" class="bannote"></div>
 
     <div id="leagueCard" class="leaguecard"></div>
 
@@ -253,12 +256,21 @@ $("gpsBtn").onclick = () => {
   );
 };
 
+// --- compte : pseudo + rang gardés (token local, réutilisable entre appareils) ---
+try {
+  const savedName = localStorage.getItem("relais_name");
+  if (savedName) $("name").value = savedName;
+} catch (e) {}
+
 // --- rejoindre ---
 $("joinBtn").onclick = async () => {
   const name = $("name").value.trim() || "Anonyme";
   const city = $("city").value, country = CITY_GEO[city]?.country || "France";
-  const res = await post("/api/join", { name, city, country });
+  let token = null; try { token = localStorage.getItem("relais_token"); } catch (e) {}
+  const res = await post("/api/join", { name, city, country, token });
   playerId = res.playerId;
+  try { localStorage.setItem("relais_token", res.token); localStorage.setItem("relais_name", name); } catch (e) {}
+  if (res.me.xp > 0) $("seasonLine").textContent = `Bon retour ${name} — rang ${res.me.tier} (${res.me.xp} xp) restauré ✅`;
   applyMe(res.me);
   $("join").style.display = "none";
   $("game").style.display = "block";
@@ -301,30 +313,49 @@ function loop(ts) {
 }
 
 // --- tenter une passe ---
+let bannedUntil = 0;
+async function raw(path) {
+  const res = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) });
+  return { status: res.status, body: await res.json().catch(() => ({})) };
+}
 async function attempt() {
   if (!playerId || locked) return;
+  if (Date.now() < bannedUntil) { flash("miss"); return; } // suspendu : tap ignoré
   const inZone = needlePos >= zoneStart && needlePos <= zoneStart + diff.zone;
   locked = true;
   try {
     if (inZone) {
-      const r = await post("/api/pass", { playerId });
-      flash("hit");
-      floatText("+" + r.gained, "#2ecc71");
-      $("chainVal").textContent = r.chain;
-      applyMe(r.me);
+      const { status, body } = await raw("/api/pass");
+      if (status === 429) { /* trop rapide, ignoré */ }
+      else if (status === 403) { applyBan(body); }
+      else { flash("hit"); floatText("+" + body.gained, "#2ecc71"); $("chainVal").textContent = body.chain; applyMe(body.me); }
       newZone();
     } else {
-      const r = await post("/api/break", { playerId });
+      const { body } = await raw("/api/break");
       flash("miss");
-      floatText("CASSÉ !", "#e74c3c");
-      $("chainVal").textContent = "0";
-      $("chainSub").textContent = r.brokeAt > 0 ? `tu as cassé une chaîne de ${r.brokeAt} 💀` : "raté";
-      applyMe(r.me);
+      if (body.ignored) { floatText("SUSPENDU", "#ff4d6d"); }
+      else {
+        floatText(body.penalty ? `CASSÉ −${body.penalty}` : "CASSÉ !", "#e74c3c");
+        $("chainVal").textContent = "0";
+        $("chainSub").textContent = body.brokeAt > 0 ? `tu as cassé une chaîne de ${body.brokeAt} 💀 (−${body.penalty} pts)` : "raté";
+      }
+      if (body.banSec) applyBan(body);
+      applyMe(body.me);
       newZone();
     }
   } catch (e) { /* ignore réseau */ }
   setTimeout(() => (locked = false), 120);
 }
+function applyBan(body) {
+  const secs = body.bannedFor || body.banSec || 0;
+  if (secs > 0) { bannedUntil = Date.now() + secs * 1000; }
+}
+setInterval(() => {
+  const el = $("banNote"); if (!el) return;
+  const left = Math.ceil((bannedUntil - Date.now()) / 1000);
+  if (left > 0) { el.style.display = "block"; el.textContent = `🟥 SUSPENDU ${left}s — sabotage détecté, tes ratés ne comptent plus`; }
+  else el.style.display = "none";
+}, 250);
 
 function flash(cls) {
   const a = $("arena");
