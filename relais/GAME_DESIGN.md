@@ -80,9 +80,13 @@ vivant (bots d'autres villes). Voir `README.md` pour lancer.
 - [x] **Notifs push natives** : l'étincelle réveille l'iPhone verrouillé du destinataire ;
       le maillon cramé reçoit la notif sonore « ta mère le chat » (rebranche le moteur push d'origine)
 
+- [x] **Carte du monde** : projection équirectangulaire, villes en lat/lng, compétition mondiale
+- [x] **Étage Continents** (Ville ▸ Pays ▸ Continent ▸ Monde) — `/api/state.continents`
+- [x] **Ligues avec montée/descente** : villes réparties en divisions, top 2 montent / bottom 2 descendent
+      en fin de saison (`/api/leagues`, les ligues persistent entre saisons)
+
 ### Prochaines étapes
-- [ ] Départements / régions (2 étages de plus dans l'agrégation)
-- [ ] Ligues avec montée/descente (matchs entre villes de taille comparable)
-- [ ] GPS réel à l'inscription (au lieu du menu déroulant)
 - [ ] Persistance (remplacer l'état en mémoire par une vraie base — Supabase)
+- [ ] GPS réel à l'inscription (au lieu du menu déroulant)
 - [ ] Temps réel poussé (WebSocket/SSE au lieu du polling)
+- [ ] Départements / régions (zoom national, sous les villes d'un même pays)

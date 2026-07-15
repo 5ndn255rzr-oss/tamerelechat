@@ -52,6 +52,26 @@ const countries = new Map(); // "Pays" -> { score, passes }
 
 const chain = { current: 0, best: 0, lastBreakBy: null, lastBreakCity: null };
 
+// --- Étage CONTINENT (Ville ▸ Pays ▸ Continent ▸ Monde) -----------------------
+const CONTINENT_OF = {
+  "France": "Europe", "Royaume-Uni": "Europe", "Allemagne": "Europe", "Espagne": "Europe",
+  "Italie": "Europe", "Belgique": "Europe", "Suisse": "Europe", "Portugal": "Europe",
+  "Russie": "Europe", "Turquie": "Europe",
+  "Égypte": "Afrique", "Nigeria": "Afrique", "Sénégal": "Afrique", "Côte d'Ivoire": "Afrique",
+  "Kenya": "Afrique", "Afrique du Sud": "Afrique",
+  "Émirats": "Asie", "Inde": "Asie", "Thaïlande": "Asie", "Singapour": "Asie",
+  "Chine": "Asie", "Corée": "Asie", "Japon": "Asie",
+  "Australie": "Océanie",
+  "Brésil": "Amérique du Sud", "Argentine": "Amérique du Sud",
+  "Mexique": "Amérique du Nord", "USA": "Amérique du Nord", "Canada": "Amérique du Nord",
+};
+const continentOf = (country) => CONTINENT_OF[country] || "Monde";
+const continents = new Map(); // "Continent" -> { score, passes }
+
+// --- LIGUES (montée/descente entre villes de niveau comparable) ---------------
+const LEAGUE_SIZE = 6;
+const leagueOf = new Map(); // ville -> n° de ligue (1 = élite). Persiste entre saisons.
+
 // --- Coordonnées mondiales pour la CARTE DE CONQUÊTE (latitude / longitude) ----
 // Le client projette (lat,lng) en équirectangulaire sur une vraie carte du monde.
 const CITY_GEO = {
@@ -97,7 +117,10 @@ function seedRivals() {
     ["Bruxelles", 950], ["Dakar", 820], ["Sydney", 760], ["Mexico", 1100],
     ["Le Caire", 690], ["Istanbul", 880], ["Séoul", 940],
   ];
-  for (const [city, score] of seed) bumpTerritory(city, CITY_GEO[city].country, score);
+  seed.forEach(([city, score], i) => {
+    if (!leagueOf.has(city)) leagueOf.set(city, Math.floor(i / LEAGUE_SIZE) + 1); // ligues initiales par rang de départ
+    bumpTerritory(city, CITY_GEO[city].country, score);
+  });
 }
 
 // --- SAISONS -----------------------------------------------------------------
@@ -116,9 +139,12 @@ function endSeason() {
   });
   if (hallOfFame.length > 10) hallOfFame.pop();
   console.log(`[saison] fin S${season.number} — 🏆 ${tc?.name || "?"} / ${tp?.name || "?"} (chaîne ${chain.best})`);
-  // reset des territoires + de la chaîne ; les rangs perso (xp) restent acquis.
+  // montée/descente AVANT le reset (utilise les scores de la saison qui s'achève)
+  applyPromotionRelegation();
+  // reset des territoires + de la chaîne ; rangs perso (xp) et ligues conservés.
   cities.clear();
   countries.clear();
+  continents.clear();
   chain.current = 0; chain.best = 0; chain.lastBreakBy = null; chain.lastBreakCity = null;
   for (const p of players.values()) { p.score = 0; p.streak = 0; }
   season = { number: season.number + 1, startedAt: Date.now() };
@@ -145,11 +171,57 @@ function bumpTerritory(city, country, points) {
   c.passes += 1;
   c.country = country;
   cities.set(city, c);
+  // nouvelle ville -> entre dans la ligue la plus basse
+  if (!leagueOf.has(city)) {
+    leagueOf.set(city, leagueOf.size ? Math.max(...leagueOf.values()) : 1);
+  }
 
   const p = countries.get(country) || { score: 0, passes: 0 };
   p.score += points;
   p.passes += 1;
   countries.set(country, p);
+
+  const cont = continentOf(country);
+  const k = continents.get(cont) || { score: 0, passes: 0 };
+  k.score += points;
+  k.passes += 1;
+  continents.set(cont, k);
+}
+
+// Classement d'une ligue + zones montée/descente
+function leagueStandings() {
+  const out = {};
+  for (const [city, c] of cities) {
+    const lg = leagueOf.get(city) || 1;
+    (out[lg] ||= []).push({ name: city, score: c.score, country: c.country });
+  }
+  for (const lg of Object.keys(out)) out[lg].sort((a, b) => b.score - a.score);
+  return out;
+}
+function myLeagueInfo(cityName) {
+  const lg = leagueOf.get(cityName);
+  if (!lg) return null;
+  const st = leagueStandings()[lg] || [];
+  const pos = st.findIndex((x) => x.name === cityName) + 1;
+  const maxL = leagueOf.size ? Math.max(...leagueOf.values()) : 1;
+  return {
+    league: lg, pos, size: st.length,
+    promo: pos >= 1 && pos <= 2 && lg > 1,           // top 2 -> montée
+    releg: pos > st.length - 2 && lg < maxL,          // bottom 2 -> descente
+    rivals: st.slice(Math.max(0, pos - 2), pos + 1),  // voisins directs
+  };
+}
+// Applique la montée/descente en fin de saison (sur les scores courants)
+function applyPromotionRelegation() {
+  const byLeague = leagueStandings();
+  const maxL = leagueOf.size ? Math.max(...leagueOf.values()) : 1;
+  for (const lg of Object.keys(byLeague)) {
+    const list = byLeague[lg], L = Number(lg);
+    list.forEach((row, idx) => {
+      if (idx < 2 && L > 1) leagueOf.set(row.name, L - 1);
+      else if (idx >= list.length - 2 && L < maxL) leagueOf.set(row.name, L + 1);
+    });
+  }
 }
 
 function leaderboard(map, n = 6) {
@@ -235,10 +307,21 @@ app.get("/api/state", (req, res) => {
     playersOnline: players.size,
     cities: leaderboard(cities),
     countries: leaderboard(countries),
+    continents: leaderboard(continents),
     me: me ? publicPlayer(me) : null,
     myCityRank: me ? rankOf(cities, me.city) : null,
     myCountryRank: me ? rankOf(countries, me.country) : null,
+    myContinentRank: me ? rankOf(continents, continentOf(me.country)) : null,
+    myContinent: me ? continentOf(me.country) : null,
+    myLeague: me ? myLeagueInfo(me.city) : null,
   });
+});
+
+// --- LIGUES : classements par division + zones montée/descente -----------------
+app.get("/api/leagues", (req, res) => {
+  const standings = leagueStandings();
+  const maxL = leagueOf.size ? Math.max(...leagueOf.values()) : 1;
+  res.json({ leagueSize: LEAGUE_SIZE, maxLeague: maxL, standings, myLeague: myLeagueInfo(req.query?.city) });
 });
 
 // --- CARTE DE CONQUÊTE : villes géolocalisées + qui mène -----------------------

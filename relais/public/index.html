@@ -76,6 +76,18 @@
   .row.mine { color:#fff; }
   .row.mine .nm { color:#a29bfe; font-weight:800; }
   .online { text-align:center; font-size:12px; color:#8a83ad; margin-top:14px; }
+  .leaguecard { margin-top:14px; background:linear-gradient(180deg,#241f38,var(--card)); border:1px solid var(--line);
+    border-radius:16px; padding:13px 14px; }
+  .leaguecard .lhead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .leaguecard .lname { font-weight:800; font-size:15px; }
+  .leaguecard .pill { margin-left:auto; font-size:11px; font-weight:800; padding:4px 9px; border-radius:999px; }
+  .pill.promo { background:rgba(39,174,96,.2); color:#4ee08a; border:1px solid #27ae60; }
+  .pill.releg { background:rgba(231,76,109,.2); color:#ff8098; border:1px solid #e7405f; }
+  .pill.safe { background:#2b2743; color:#9a92c0; border:1px solid var(--line); }
+  .lrow { display:flex; font-size:13px; padding:3px 0; }
+  .lrow .lp { width:22px; color:#8a83ad; font-family:monospace; }
+  .lrow.meCity { color:#fff; font-weight:800; } .lrow.meCity .nm { color:#a99bff; }
+  .lrow .sc { margin-left:auto; color:var(--gold); font-family:monospace; }
   .mapwrap { margin-top:16px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:13px; }
   .mapwrap h3 { margin:0 0 8px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#9a92c0; }
   .map { position:relative; width:100%; aspect-ratio:2/1; }
@@ -127,6 +139,8 @@
       <div class="arena-hint">clic / espace / touch — plus ton rang monte, plus c'est serré</div>
     </div>
 
+    <div id="leagueCard" class="leaguecard"></div>
+
     <div class="boards">
       <div class="board">
         <h3>🏙️ Villes</h3>
@@ -137,8 +151,12 @@
         <div id="countryBoard"></div>
       </div>
     </div>
+    <div class="board" style="margin-top:12px">
+      <h3>🌐 Continents</h3>
+      <div id="contBoard"></div>
+    </div>
     <div class="mapwrap">
-      <h3>🗺️ Carte de conquête — l'Hexagone</h3>
+      <h3>🗺️ Carte de conquête — le monde</h3>
       <div class="map" id="map">
         <canvas id="worldCanvas"></canvas>
       </div>
@@ -309,9 +327,36 @@ async function poll() {
       const hof = r.hallOfFame?.[0] ? ` · 🏆 S${r.hallOfFame[0].season} : ${r.hallOfFame[0].topCity}` : "";
       $("seasonLine").innerHTML = `Saison <b style="color:#a99bff;font-family:monospace">${s.number}</b> · fin dans <b style="color:#a99bff">${left}</b>${hof}`;
     }
+    renderContinents(r.continents, r.myContinent);
+    renderLeague(r.myLeague);
     $("online").textContent = `⚡ ${r.playersOnline} joueur(s) dans la chaîne`;
     renderMap();
   } catch (e) {}
+}
+
+function renderContinents(list, mine) {
+  const el = $("contBoard"); if (!el || !list) return;
+  el.innerHTML = "";
+  list.forEach((row, i) => {
+    const d = document.createElement("div");
+    d.className = "row" + (row.name === mine ? " mine" : "");
+    d.innerHTML = `<span class="n">${i + 1}</span><span class="nm">${row.name}</span><span class="sc">${row.score}</span>`;
+    el.appendChild(d);
+  });
+}
+
+async function renderLeague(my) {
+  const card = $("leagueCard"); if (!card) return;
+  if (!my) { card.innerHTML = ""; return; }
+  let standings = [];
+  try { standings = (await fetch(API + "/api/leagues?city=" + encodeURIComponent(me?.city || "")).then((x) => x.json())).standings[my.league] || []; } catch (e) {}
+  const pill = my.promo ? `<span class="pill promo">⬆️ zone montée</span>`
+    : my.releg ? `<span class="pill releg">⬇️ zone descente</span>`
+    : `<span class="pill safe">maintien</span>`;
+  const rows = standings.map((c, i) =>
+    `<div class="lrow${c.name === me?.city ? " meCity" : ""}"><span class="lp">${i + 1}</span><span class="nm">${c.name}</span><span class="sc">${c.score}</span></div>`
+  ).join("");
+  card.innerHTML = `<div class="lhead"><span class="lname">🏆 Ligue ${my.league}</span><span style="color:#8a83ad;font-size:12px">${my.pos}ᵉ / ${my.size}</span>${pill}</div>${rows}`;
 }
 
 // --- carte de conquête (vraie carte du monde, projection équirectangulaire) ---
