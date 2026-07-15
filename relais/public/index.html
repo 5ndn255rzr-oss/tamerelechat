@@ -29,6 +29,9 @@
     padding:17px; font-size:18px; font-weight:800; width:100%; cursor:pointer;
   }
   button.primary:active { transform: scale(.98); }
+  .ghostbtn { background:#221c3d; color:#c9c2e8; border:1px solid var(--line); border-radius:14px;
+    padding:12px; font-size:14px; font-weight:700; width:100%; cursor:pointer; }
+  .ghostbtn:active { transform: scale(.98); }
 
   /* --- HUD --- */
   #game { display:none; }
@@ -109,6 +112,8 @@
   <div id="join">
     <input id="name" placeholder="Ton blaze" maxlength="20" />
     <select id="city"></select>
+    <button class="ghostbtn" id="gpsBtn">📍 Utiliser ma position</button>
+    <div id="gpsNote" style="font-size:12px;color:#8a83ad;text-align:center;min-height:16px"></div>
     <button class="primary" id="joinBtn">Entrer dans la chaîne</button>
   </div>
 
@@ -155,6 +160,7 @@
       <h3>🌐 Continents</h3>
       <div id="contBoard"></div>
     </div>
+    <div id="zoomCard" class="leaguecard"></div>
     <div class="mapwrap">
       <h3>🗺️ Carte de conquête — le monde</h3>
       <div class="map" id="map">
@@ -196,7 +202,12 @@ async function post(path, body) {
 
 // --- villes du monde (menu + pays dérivé) ---
 const CITY_GEO = {
-  "Paris": { lat: 48.85, lng: 2.35, country: "France" }, "Londres": { lat: 51.5, lng: -0.13, country: "Royaume-Uni" },
+  "Paris": { lat: 48.85, lng: 2.35, country: "France" }, "Lyon": { lat: 45.76, lng: 4.84, country: "France" },
+  "Marseille": { lat: 43.3, lng: 5.37, country: "France" }, "Nice": { lat: 43.7, lng: 7.27, country: "France" },
+  "Toulouse": { lat: 43.6, lng: 1.44, country: "France" }, "Bordeaux": { lat: 44.84, lng: -0.58, country: "France" },
+  "Lille": { lat: 50.63, lng: 3.06, country: "France" }, "Nantes": { lat: 47.22, lng: -1.55, country: "France" },
+  "Strasbourg": { lat: 48.57, lng: 7.75, country: "France" },
+  "Londres": { lat: 51.5, lng: -0.13, country: "Royaume-Uni" },
   "Berlin": { lat: 52.52, lng: 13.4, country: "Allemagne" }, "Madrid": { lat: 40.42, lng: -3.7, country: "Espagne" },
   "Rome": { lat: 41.9, lng: 12.5, country: "Italie" }, "Bruxelles": { lat: 50.85, lng: 4.35, country: "Belgique" },
   "Lisbonne": { lat: 38.72, lng: -9.14, country: "Portugal" }, "Moscou": { lat: 55.75, lng: 37.62, country: "Russie" },
@@ -221,6 +232,27 @@ const CITY_GEO = {
   });
 })();
 
+// --- GPS : place le joueur sur la ville la plus proche ---
+function nearestCity(lat, lng) {
+  const d2 = (a, b, c, e) => { const dy = a - c, dx = (b - e) * Math.cos((a + c) / 2 * Math.PI / 180); return dy * dy + dx * dx; };
+  let best = null, bd = Infinity;
+  for (const [n, g] of Object.entries(CITY_GEO)) { const d = d2(lat, lng, g.lat, g.lng); if (d < bd) { bd = d; best = n; } }
+  return best;
+}
+$("gpsBtn").onclick = () => {
+  if (!navigator.geolocation) { $("gpsNote").textContent = "GPS indisponible sur cet appareil."; return; }
+  $("gpsNote").textContent = "📍 localisation…";
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      const city = nearestCity(p.coords.latitude, p.coords.longitude);
+      $("city").value = city;
+      $("gpsNote").textContent = `📍 ville la plus proche : ${city}`;
+    },
+    () => { $("gpsNote").textContent = "Position refusée — choisis ta ville dans la liste."; },
+    { enableHighAccuracy: false, timeout: 8000 }
+  );
+};
+
 // --- rejoindre ---
 $("joinBtn").onclick = async () => {
   const name = $("name").value.trim() || "Anonyme";
@@ -233,7 +265,7 @@ $("joinBtn").onclick = async () => {
   requestAnimationFrame(() => drawWorld());
   newZone();
   requestAnimationFrame(loop);
-  poll(); setInterval(poll, 1200);
+  connectStream();
 };
 
 function applyMe(m) {
@@ -311,27 +343,57 @@ $("arena").addEventListener("click", attempt);
 $("arena").addEventListener("touchstart", (e) => { e.preventDefault(); attempt(); }, { passive: false });
 window.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); attempt(); } });
 
-// --- monde vivant : chaîne + classements ---
-async function poll() {
+// --- monde vivant : temps réel via SSE (repli sur polling si indisponible) ---
+function connectStream() {
   try {
-    const r = await fetch(API + "/api/state?playerId=" + playerId).then((x) => x.json());
-    $("chainVal").textContent = r.chain.current;
-    $("chainSub").textContent = r.chain.lastBreakBy
-      ? `record ${r.chain.best} · dernier crash : ${r.chain.lastBreakBy} (${r.chain.lastBreakCity})`
-      : `record : ${r.chain.best}`;
-    renderBoard($("cityBoard"), r.cities, me?.city, r.myCityRank);
-    renderBoard($("countryBoard"), r.countries, me?.country, r.myCountryRank);
-    if (r.season) {
-      const s = r.season, m = Math.floor(s.secondsLeft / 86400);
-      const left = m > 0 ? `${m}j` : `${Math.floor(s.secondsLeft / 3600)}h ${Math.floor((s.secondsLeft % 3600) / 60)}m`;
-      const hof = r.hallOfFame?.[0] ? ` · 🏆 S${r.hallOfFame[0].season} : ${r.hallOfFame[0].topCity}` : "";
-      $("seasonLine").innerHTML = `Saison <b style="color:#a99bff;font-family:monospace">${s.number}</b> · fin dans <b style="color:#a99bff">${left}</b>${hof}`;
-    }
-    renderContinents(r.continents, r.myContinent);
-    renderLeague(r.myLeague);
-    $("online").textContent = `⚡ ${r.playersOnline} joueur(s) dans la chaîne`;
-    renderMap();
-  } catch (e) {}
+    const es = new EventSource(API + "/api/stream?playerId=" + playerId);
+    es.onmessage = (ev) => { try { renderState(JSON.parse(ev.data)); } catch (e) {} };
+    es.onerror = () => { es.close(); startPolling(); }; // repli
+  } catch (e) { startPolling(); }
+}
+let polling = false;
+function startPolling() {
+  if (polling) return; polling = true;
+  const tick = async () => { try { renderState(await fetch(API + "/api/state?playerId=" + playerId).then((x) => x.json())); } catch (e) {} };
+  tick(); setInterval(tick, 1300);
+}
+
+function renderState(r) {
+  if (!r || !r.chain) return;
+  $("chainVal").textContent = r.chain.current;
+  $("chainSub").textContent = r.chain.lastBreakBy
+    ? `record ${r.chain.best} · dernier crash : ${r.chain.lastBreakBy} (${r.chain.lastBreakCity})`
+    : `record : ${r.chain.best}`;
+  renderBoard($("cityBoard"), r.cities, me?.city, r.myCityRank);
+  renderBoard($("countryBoard"), r.countries, me?.country, r.myCountryRank);
+  if (r.season) {
+    const s = r.season, m = Math.floor(s.secondsLeft / 86400);
+    const left = m > 0 ? `${m}j` : `${Math.floor(s.secondsLeft / 3600)}h ${Math.floor((s.secondsLeft % 3600) / 60)}m`;
+    const hof = r.hallOfFame?.[0] ? ` · 🏆 S${r.hallOfFame[0].season} : ${r.hallOfFame[0].topCity}` : "";
+    $("seasonLine").innerHTML = `Saison <b style="color:#a99bff;font-family:monospace">${s.number}</b> · fin dans <b style="color:#a99bff">${left}</b>${hof}`;
+  }
+  renderContinents(r.continents, r.myContinent);
+  renderLeague(r.myLeague);
+  renderZoom(r.myCountry, r.myRegion);
+  $("online").textContent = `⚡ ${r.playersOnline} joueur(s) · temps réel`;
+  renderMap();
+}
+
+// --- Zoom national : régions du pays du joueur ---
+let zoomCache = { country: null, at: 0 };
+async function renderZoom(country, myRegion) {
+  const el = $("zoomCard"); if (!el || !country) return;
+  const now = Date.now();
+  if (zoomCache.country !== country || now - zoomCache.at > 2500) {
+    zoomCache = { country, at: now };
+    try {
+      const data = await fetch(API + "/api/country?name=" + encodeURIComponent(country)).then((x) => x.json());
+      const rows = (data.regions || []).slice(0, 6).map((r, i) =>
+        `<div class="lrow${r.region === myRegion ? " meCity" : ""}"><span class="lp">${i + 1}</span><span class="nm">${r.region}</span><span class="sc">${r.score}</span></div>`
+      ).join("");
+      el.innerHTML = `<div class="lhead"><span class="lname">🔎 ${country} — régions</span></div>${rows || '<div class="lrow"><span class="nm">—</span></div>'}`;
+    } catch (e) {}
+  }
 }
 
 function renderContinents(list, mine) {

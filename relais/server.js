@@ -75,48 +75,59 @@ const leagueOf = new Map(); // ville -> n° de ligue (1 = élite). Persiste entr
 
 // --- Coordonnées mondiales pour la CARTE DE CONQUÊTE (latitude / longitude) ----
 // Le client projette (lat,lng) en équirectangulaire sur une vraie carte du monde.
+// `region` sert au ZOOM NATIONAL (regroupement des villes d'un même pays).
 const CITY_GEO = {
-  "Paris":        { lat: 48.85, lng: 2.35,   country: "France" },
-  "Londres":      { lat: 51.50, lng: -0.13,  country: "Royaume-Uni" },
-  "Berlin":       { lat: 52.52, lng: 13.40,  country: "Allemagne" },
-  "Madrid":       { lat: 40.42, lng: -3.70,  country: "Espagne" },
-  "Rome":         { lat: 41.90, lng: 12.50,  country: "Italie" },
-  "Bruxelles":    { lat: 50.85, lng: 4.35,   country: "Belgique" },
-  "Genève":       { lat: 46.20, lng: 6.14,   country: "Suisse" },
-  "Lisbonne":     { lat: 38.72, lng: -9.14,  country: "Portugal" },
-  "Moscou":       { lat: 55.75, lng: 37.62,  country: "Russie" },
-  "Istanbul":     { lat: 41.01, lng: 28.98,  country: "Turquie" },
-  "Le Caire":     { lat: 30.04, lng: 31.24,  country: "Égypte" },
-  "Lagos":        { lat: 6.52,  lng: 3.38,   country: "Nigeria" },
-  "Dakar":        { lat: 14.72, lng: -17.47, country: "Sénégal" },
-  "Abidjan":      { lat: 5.35,  lng: -4.00,  country: "Côte d'Ivoire" },
-  "Nairobi":      { lat: -1.29, lng: 36.82,  country: "Kenya" },
-  "Johannesburg": { lat: -26.20, lng: 28.04, country: "Afrique du Sud" },
-  "Dubaï":        { lat: 25.20, lng: 55.27,  country: "Émirats" },
-  "Mumbai":       { lat: 19.08, lng: 72.88,  country: "Inde" },
-  "Delhi":        { lat: 28.61, lng: 77.21,  country: "Inde" },
-  "Bangkok":      { lat: 13.76, lng: 100.50, country: "Thaïlande" },
-  "Singapour":    { lat: 1.35,  lng: 103.82, country: "Singapour" },
-  "Pékin":        { lat: 39.90, lng: 116.40, country: "Chine" },
-  "Shanghai":     { lat: 31.23, lng: 121.47, country: "Chine" },
-  "Séoul":        { lat: 37.57, lng: 126.98, country: "Corée" },
-  "Tokyo":        { lat: 35.68, lng: 139.65, country: "Japon" },
-  "Sydney":       { lat: -33.87, lng: 151.21, country: "Australie" },
-  "São Paulo":    { lat: -23.55, lng: -46.63, country: "Brésil" },
-  "Buenos Aires": { lat: -34.60, lng: -58.38, country: "Argentine" },
-  "Mexico":       { lat: 19.43, lng: -99.13, country: "Mexique" },
-  "New York":     { lat: 40.71, lng: -74.00, country: "USA" },
-  "Los Angeles":  { lat: 34.05, lng: -118.24, country: "USA" },
-  "Montréal":     { lat: 45.50, lng: -73.57, country: "Canada" },
+  "Paris":        { lat: 48.85, lng: 2.35,   country: "France", region: "Île-de-France" },
+  "Lyon":         { lat: 45.76, lng: 4.84,   country: "France", region: "Auvergne-Rhône-Alpes" },
+  "Marseille":    { lat: 43.30, lng: 5.37,   country: "France", region: "Provence-Alpes-Côte d'Azur" },
+  "Nice":         { lat: 43.70, lng: 7.27,   country: "France", region: "Provence-Alpes-Côte d'Azur" },
+  "Toulouse":     { lat: 43.60, lng: 1.44,   country: "France", region: "Occitanie" },
+  "Bordeaux":     { lat: 44.84, lng: -0.58,  country: "France", region: "Nouvelle-Aquitaine" },
+  "Lille":        { lat: 50.63, lng: 3.06,   country: "France", region: "Hauts-de-France" },
+  "Nantes":       { lat: 47.22, lng: -1.55,  country: "France", region: "Pays de la Loire" },
+  "Strasbourg":   { lat: 48.57, lng: 7.75,   country: "France", region: "Grand Est" },
+  "Londres":      { lat: 51.50, lng: -0.13,  country: "Royaume-Uni", region: "Angleterre" },
+  "Berlin":       { lat: 52.52, lng: 13.40,  country: "Allemagne", region: "Berlin" },
+  "Madrid":       { lat: 40.42, lng: -3.70,  country: "Espagne", region: "Madrid" },
+  "Rome":         { lat: 41.90, lng: 12.50,  country: "Italie", region: "Latium" },
+  "Bruxelles":    { lat: 50.85, lng: 4.35,   country: "Belgique", region: "Bruxelles-Capitale" },
+  "Genève":       { lat: 46.20, lng: 6.14,   country: "Suisse", region: "Genève" },
+  "Lisbonne":     { lat: 38.72, lng: -9.14,  country: "Portugal", region: "Lisbonne" },
+  "Moscou":       { lat: 55.75, lng: 37.62,  country: "Russie", region: "Moscou" },
+  "Istanbul":     { lat: 41.01, lng: 28.98,  country: "Turquie", region: "Marmara" },
+  "Le Caire":     { lat: 30.04, lng: 31.24,  country: "Égypte", region: "Le Caire" },
+  "Lagos":        { lat: 6.52,  lng: 3.38,   country: "Nigeria", region: "Lagos" },
+  "Dakar":        { lat: 14.72, lng: -17.47, country: "Sénégal", region: "Dakar" },
+  "Abidjan":      { lat: 5.35,  lng: -4.00,  country: "Côte d'Ivoire", region: "Abidjan" },
+  "Nairobi":      { lat: -1.29, lng: 36.82,  country: "Kenya", region: "Nairobi" },
+  "Johannesburg": { lat: -26.20, lng: 28.04, country: "Afrique du Sud", region: "Gauteng" },
+  "Dubaï":        { lat: 25.20, lng: 55.27,  country: "Émirats", region: "Dubaï" },
+  "Mumbai":       { lat: 19.08, lng: 72.88,  country: "Inde", region: "Maharashtra" },
+  "Delhi":        { lat: 28.61, lng: 77.21,  country: "Inde", region: "Delhi" },
+  "Bangkok":      { lat: 13.76, lng: 100.50, country: "Thaïlande", region: "Bangkok" },
+  "Singapour":    { lat: 1.35,  lng: 103.82, country: "Singapour", region: "Singapour" },
+  "Pékin":        { lat: 39.90, lng: 116.40, country: "Chine", region: "Pékin" },
+  "Shanghai":     { lat: 31.23, lng: 121.47, country: "Chine", region: "Shanghai" },
+  "Séoul":        { lat: 37.57, lng: 126.98, country: "Corée", region: "Séoul" },
+  "Tokyo":        { lat: 35.68, lng: 139.65, country: "Japon", region: "Kantō" },
+  "Sydney":       { lat: -33.87, lng: 151.21, country: "Australie", region: "Nouvelle-Galles du Sud" },
+  "São Paulo":    { lat: -23.55, lng: -46.63, country: "Brésil", region: "São Paulo" },
+  "Buenos Aires": { lat: -34.60, lng: -58.38, country: "Argentine", region: "Buenos Aires" },
+  "Mexico":       { lat: 19.43, lng: -99.13, country: "Mexique", region: "Mexico" },
+  "New York":     { lat: 40.71, lng: -74.00, country: "USA", region: "New York" },
+  "Los Angeles":  { lat: 34.05, lng: -118.24, country: "USA", region: "Californie" },
+  "Montréal":     { lat: 45.50, lng: -73.57, country: "Canada", region: "Québec" },
 };
+const regionOf = (city) => CITY_GEO[city]?.region || "—";
 
 // Rivaux de départ : la carte/les classements ne sont jamais vides.
 function seedRivals() {
   const seed = [
     ["Paris", 2300], ["Londres", 2100], ["New York", 1950], ["Tokyo", 1800],
-    ["Shanghai", 1700], ["Lagos", 1250], ["São Paulo", 1400], ["Mumbai", 1300],
-    ["Bruxelles", 950], ["Dakar", 820], ["Sydney", 760], ["Mexico", 1100],
-    ["Le Caire", 690], ["Istanbul", 880], ["Séoul", 940],
+    ["Shanghai", 1700], ["Lyon", 1450], ["São Paulo", 1400], ["Mumbai", 1300],
+    ["Lagos", 1250], ["Marseille", 1150], ["Mexico", 1100], ["Séoul", 940],
+    ["Bruxelles", 950], ["Lille", 900], ["Istanbul", 880], ["Dakar", 820],
+    ["Toulouse", 780], ["Sydney", 760], ["Le Caire", 690], ["Bordeaux", 620],
   ];
   seed.forEach(([city, score], i) => {
     if (!leagueOf.has(city)) leagueOf.set(city, Math.floor(i / LEAGUE_SIZE) + 1); // ligues initiales par rang de départ
@@ -307,6 +318,7 @@ app.post("/api/pass", (req, res) => {
   if (chain.current > chain.best) chain.best = chain.current;
 
   res.json({ ok: true, gained, chain: chain.current, me: publicPlayer(p) });
+  broadcastWorld(); // les autres voient ta passe instantanément
 });
 
 // --- Raté : la chaîne mondiale tombe -----------------------------------------
@@ -321,12 +333,13 @@ app.post("/api/break", (req, res) => {
   p.streak = 0;
 
   res.json({ ok: true, brokeAt, chain: 0, me: publicPlayer(p) });
+  broadcastWorld();
 });
 
 // --- Photo instantanée du monde ----------------------------------------------
-app.get("/api/state", (req, res) => {
-  const me = players.get(req.query?.playerId);
-  res.json({
+function buildState(playerId) {
+  const me = players.get(playerId);
+  return {
     season: seasonInfo(),
     hallOfFame: hallOfFame.slice(0, 3),
     chain,
@@ -340,14 +353,57 @@ app.get("/api/state", (req, res) => {
     myContinentRank: me ? rankOf(continents, continentOf(me.country)) : null,
     myContinent: me ? continentOf(me.country) : null,
     myLeague: me ? myLeagueInfo(me.city) : null,
-  });
+    myCountry: me ? me.country : null,
+    myRegion: me ? regionOf(me.city) : null,
+  };
+}
+app.get("/api/state", (req, res) => res.json(buildState(req.query?.playerId)));
+
+// --- TEMPS RÉEL : flux SSE du monde (remplace le polling) ---------------------
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+  "X-Accel-Buffering": "no", // évite le buffering derrière un proxy
+};
+const worldClients = new Set();
+app.get("/api/stream", (req, res) => {
+  res.writeHead(200, SSE_HEADERS);
+  res.write(": ok\n\n");
+  const client = { res, playerId: req.query?.playerId };
+  worldClients.add(client);
+  sendWorld(client);
+  req.on("close", () => worldClients.delete(client));
 });
+function sendWorld(client) {
+  try { client.res.write(`data: ${JSON.stringify(buildState(client.playerId))}\n\n`); } catch (e) {}
+}
+function broadcastWorld() { for (const c of worldClients) sendWorld(c); }
+setInterval(broadcastWorld, 1500); // rafraîchit classements (bots) + chrono saison
 
 // --- LIGUES : classements par division + zones montée/descente -----------------
 app.get("/api/leagues", (req, res) => {
   const standings = leagueStandings();
   const maxL = leagueOf.size ? Math.max(...leagueOf.values()) : 1;
   res.json({ leagueSize: LEAGUE_SIZE, maxLeague: maxL, standings, myLeague: myLeagueInfo(req.query?.city) });
+});
+
+// --- ZOOM NATIONAL : villes d'un pays regroupées par région -------------------
+app.get("/api/country", (req, res) => {
+  const name = (req.query?.name || "").toString();
+  const regions = new Map(); // région -> { score, cities:[{name,score}] }
+  for (const [city, c] of cities) {
+    if (c.country !== name) continue;
+    const rg = regionOf(city);
+    const r = regions.get(rg) || { score: 0, cities: [] };
+    r.score += c.score;
+    r.cities.push({ name: city, score: c.score });
+    regions.set(rg, r);
+  }
+  const out = [...regions.entries()]
+    .map(([region, r]) => ({ region, score: r.score, cities: r.cities.sort((a, b) => b.score - a.score) }))
+    .sort((a, b) => b.score - a.score);
+  res.json({ country: name, regions: out });
 });
 
 // --- CARTE DE CONQUÊTE : villes géolocalisées + qui mène -----------------------
@@ -459,6 +515,11 @@ function roomView(room, playerId) {
   };
 }
 
+function broadcastRoom(room) {
+  for (const c of room.clients) {
+    try { c.res.write(`data: ${JSON.stringify(roomView(room, c.playerId))}\n\n`); } catch (e) {}
+  }
+}
 function armTimer(room) {
   clearTimeout(room.timer);
   room.firesAt = Date.now() + HOT_SEC * 1000;
@@ -483,6 +544,7 @@ function onTimeout(room) {
   room.holderId = others.length ? others[Math.floor(Math.random() * others.length)] : loserId;
   notifyHolder(room);
   armTimer(room);
+  broadcastRoom(room); // tout le monde voit le crash + le nouveau porteur en direct
 }
 
 // Réveille le nouveau porteur : son iPhone sonne, l'étincelle vient de lui tomber dessus.
@@ -501,7 +563,7 @@ app.post("/api/room/create", (req, res) => {
   const code = newRoomCode();
   const id = pid();
   const room = { code, players: new Map([[id, { name, token }]]), hostId: id, holderId: null,
-    started: false, chain: 0, best: 0, firesAt: null, timer: null, lastLoss: null };
+    started: false, chain: 0, best: 0, firesAt: null, timer: null, lastLoss: null, clients: new Set() };
   rooms.set(code, room);
   console.log(`[humaine] salon ${code} créé par ${name}${token ? " 📱" : ""}`);
   res.json({ code, playerId: id, room: roomView(room, id) });
@@ -516,6 +578,7 @@ app.post("/api/room/join", (req, res) => {
   const id = pid();
   room.players.set(id, { name, token });
   res.json({ code, playerId: id, room: roomView(room, id) });
+  broadcastRoom(room); // le lobby des autres se met à jour
 });
 
 app.post("/api/room/start", (req, res) => {
@@ -529,6 +592,7 @@ app.post("/api/room/start", (req, res) => {
   notifyHolder(room);
   armTimer(room);
   res.json({ ok: true, room: roomView(room, req.body.playerId) });
+  broadcastRoom(room);
 });
 
 app.post("/api/room/pass", (req, res) => {
@@ -543,12 +607,25 @@ app.post("/api/room/pass", (req, res) => {
   notifyHolder(room); // 📱 réveille le destinataire : l'étincelle vient de lui tomber dessus
   armTimer(room);
   res.json({ ok: true, room: roomView(room, playerId) });
+  broadcastRoom(room); // l'étincelle change de main en direct pour tous
 });
 
 app.get("/api/room/state", (req, res) => {
   const room = rooms.get((req.query?.code || "").toUpperCase());
   if (!room) return res.status(404).json({ error: "salon introuvable" });
   res.json(roomView(room, req.query?.playerId));
+});
+
+// --- TEMPS RÉEL : flux SSE d'un salon (hot-potato instantané) ------------------
+app.get("/api/room/stream", (req, res) => {
+  const room = rooms.get((req.query?.code || "").toUpperCase());
+  if (!room) { res.writeHead(404); return res.end(); }
+  res.writeHead(200, SSE_HEADERS);
+  res.write(": ok\n\n");
+  const client = { res, playerId: req.query?.playerId };
+  room.clients.add(client);
+  try { res.write(`data: ${JSON.stringify(roomView(room, client.playerId))}\n\n`); } catch (e) {}
+  req.on("close", () => room.clients.delete(client));
 });
 
 // --- Démarrage : restaure l'état persistant puis sauvegarde périodiquement ----

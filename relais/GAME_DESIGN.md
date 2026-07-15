@@ -89,7 +89,14 @@ vivant (bots d'autres villes). Voir `README.md` pour lancer.
       redémarrages (instantané JSON, sauvegarde périodique + fin de saison). Voir
       `SETUP_SUPABASE.md`. Sans clés → repli automatique en mémoire.
 
+- [x] **GPS réel** à l'inscription : bouton « ma position » → place le joueur sur la
+      ville la plus proche (repli menu si refusé)
+- [x] **Temps réel (SSE)** : `/api/stream` (monde) et `/api/room/stream` (hot-potato)
+      remplacent le polling — push serveur→client instantané, repli polling auto
+- [x] **Zoom national (régions)** : `/api/country?name=` regroupe les villes d'un pays
+      par région ; panneau « 🔎 régions » côté client
+
 ### Prochaines étapes
-- [ ] GPS réel à l'inscription (au lieu du menu déroulant)
-- [ ] Temps réel poussé (WebSocket/SSE au lieu du polling)
-- [ ] Départements / régions (zoom national, sous les villes d'un même pays)
+- [ ] Auth / comptes joueurs (garder son pseudo + son rang entre appareils)
+- [ ] Modération des pseudos + anti-triche (validation serveur des passes)
+- [ ] Sons/haptique enrichis, thème clair

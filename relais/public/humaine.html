@@ -208,13 +208,17 @@ $("startBtn").onclick = async () => {
   catch (e) { $("lobbyMsg").textContent = "❌ " + e.message; }
 };
 
-async function tick() {
+async function tick() { // repli si SSE indisponible
   if (!code) return;
-  let room;
-  try { room = await fetch(`${API}/api/room/state?code=${code}&playerId=${playerId}`).then((r) => r.json()); }
-  catch (e) { return; }
-  if (room.error) return;
+  try {
+    const room = await fetch(`${API}/api/room/state?code=${code}&playerId=${playerId}`).then((r) => r.json());
+    if (!room.error) renderRoom(room);
+  } catch (e) {}
+}
 
+let deadlineAt = 0, deadlineSpan = 5;
+function renderRoom(room) {
+  if (!room || room.error) return;
   if (!room.started) { renderLobby(room); return; }
   if ($("play").classList.contains("on") === false) show("play");
 
@@ -233,14 +237,11 @@ async function tick() {
     setTimeout(() => { if (room.lastLoss.id === seenLoss) $("doom").textContent = ""; }, 3000);
   }
 
-  // --- chrono ---
+  // --- chrono (interpolé localement entre 2 événements SSE) ---
   $("chain").textContent = room.chain;
   $("best").textContent = room.best;
-  const s = room.secondsLeft ?? 0;
-  $("tnum").textContent = s.toFixed(1) + "s";
-  const frac = Math.max(0, Math.min(1, s / room.deadline));
-  $("tfill").style.width = (frac * 100) + "%";
-  $("tbar").classList.toggle("low", frac < 0.4);
+  deadlineSpan = room.deadline || 5;
+  deadlineAt = Date.now() + (room.secondsLeft ?? 0) * 1000;
 
   // --- qui tient l'étincelle ---
   document.body.classList.toggle("myturn", room.isMine);
@@ -265,7 +266,7 @@ function renderPass(room) {
   others.forEach((p) => {
     const b = document.createElement("button"); b.className = "passbtn"; b.textContent = "→ " + p.name;
     b.onclick = async () => {
-      try { await post("/api/room/pass", { code, playerId, toId: p.id }); vibrate(30); tick(); }
+      try { const r = await post("/api/room/pass", { code, playerId, toId: p.id }); vibrate(30); renderRoom(r.room); }
       catch (e) { $("playMsg").textContent = "❌ " + e.message; }
     };
     grid.appendChild(b);
@@ -277,8 +278,25 @@ function redFlash() {
   document.body.appendChild(el); setTimeout(() => el.remove(), 500);
 }
 
-let pollTimer = null;
-function startPolling() { if (pollTimer) return; pollTimer = setInterval(tick, 500); tick(); }
+// --- Temps réel : flux SSE du salon (repli polling si indisponible) ---
+let started = false, es = null;
+function startPolling() {
+  if (started) return; started = true;
+  try {
+    es = new EventSource(`${API}/api/room/stream?code=${code}&playerId=${playerId}`);
+    es.onmessage = (ev) => { try { renderRoom(JSON.parse(ev.data)); } catch (e) {} };
+    es.onerror = () => { es && es.close(); setInterval(tick, 500); tick(); }; // repli
+  } catch (e) { setInterval(tick, 500); tick(); }
+  // chrono fluide côté client entre 2 événements
+  setInterval(() => {
+    if (!deadlineAt) return;
+    const s = Math.max(0, (deadlineAt - Date.now()) / 1000);
+    $("tnum").textContent = s.toFixed(1) + "s";
+    const frac = Math.max(0, Math.min(1, s / deadlineSpan));
+    $("tfill").style.width = (frac * 100) + "%";
+    $("tbar").classList.toggle("low", frac < 0.4);
+  }, 100);
+}
 </script>
 </body>
 </html>
