@@ -32,8 +32,17 @@ d'autres villes jouent en continu pour montrer que le monde tourne même sans to
 | POST | `/api/join` | rejoindre `{name, city, country}` → `playerId` |
 | POST | `/api/pass` | passe réussie `{playerId}` → points + chaîne |
 | POST | `/api/break` | raté `{playerId}` → chaîne remise à 0 |
-| GET  | `/api/state?playerId=` | chaîne + classements ville/pays + toi |
+| GET  | `/api/state?playerId=` | chaîne + classements ville/pays/continent + ta ligue + toi |
+| GET  | `/api/map` | villes géolocalisées (lat/lng) pour la carte du monde |
+| GET  | `/api/leagues?city=` | divisions + montée/descente |
+| GET  | `/api/season` | saison en cours + panthéon |
 | GET  | `/api/tiers` | table des rangs / difficulté |
 
-État **en mémoire** (repart à zéro au redémarrage) — voir la roadmap dans
-`GAME_DESIGN.md` pour la persistance et le temps réel.
+Chaîne Humaine (hot-potato) : `POST /api/room/{create,join,start,pass}` +
+`GET /api/room/state`.
+
+## Persistance (optionnelle)
+
+Par défaut l'état est **en mémoire** (repart à zéro au redémarrage). Branche
+**Supabase** pour que saisons, scores et ligues survivent — 2 minutes, sans
+terminal : voir **[`SETUP_SUPABASE.md`](./SETUP_SUPABASE.md)**.

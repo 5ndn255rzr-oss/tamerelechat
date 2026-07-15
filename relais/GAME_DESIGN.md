@@ -85,8 +85,11 @@ vivant (bots d'autres villes). Voir `README.md` pour lancer.
 - [x] **Ligues avec montée/descente** : villes réparties en divisions, top 2 montent / bottom 2 descendent
       en fin de saison (`/api/leagues`, les ligues persistent entre saisons)
 
+- [x] **Persistance Supabase** : saisons, panthéon, scores et ligues survivent aux
+      redémarrages (instantané JSON, sauvegarde périodique + fin de saison). Voir
+      `SETUP_SUPABASE.md`. Sans clés → repli automatique en mémoire.
+
 ### Prochaines étapes
-- [ ] Persistance (remplacer l'état en mémoire par une vraie base — Supabase)
 - [ ] GPS réel à l'inscription (au lieu du menu déroulant)
 - [ ] Temps réel poussé (WebSocket/SSE au lieu du polling)
 - [ ] Départements / régions (zoom national, sous les villes d'un même pays)

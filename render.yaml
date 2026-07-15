@@ -22,3 +22,10 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
+    envVars:
+      # Persistance Supabase (optionnelle) — à renseigner dans le dashboard Render.
+      # Sans elles, le serveur tourne en mémoire. Voir relais/SETUP_SUPABASE.md.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

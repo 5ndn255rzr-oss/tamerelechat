@@ -15,6 +15,7 @@
 import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { loadSnapshot, saveSnapshot, persistenceEnabled } from "./persistence.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -149,6 +150,31 @@ function endSeason() {
   for (const p of players.values()) { p.score = 0; p.streak = 0; }
   season = { number: season.number + 1, startedAt: Date.now() };
   seedRivals();
+  saveSnapshot(buildSnapshot()); // fige la nouvelle saison + le panthéon
+}
+
+// --- Persistance : (dé)sérialisation de l'état durable ------------------------
+function buildSnapshot() {
+  return {
+    season,
+    hallOfFame,
+    chainBest: chain.best,
+    cities: [...cities.entries()].map(([name, c]) => ({
+      name, country: c.country, score: c.score, league: leagueOf.get(name) || 1,
+    })),
+  };
+}
+function hydrate(snap) {
+  if (!snap || !Array.isArray(snap.cities)) return false;
+  cities.clear(); countries.clear(); continents.clear(); leagueOf.clear();
+  for (const c of snap.cities) {
+    leagueOf.set(c.name, c.league || 1);
+    bumpTerritory(c.name, c.country, c.score); // reconstruit villes/pays/continents
+  }
+  if (snap.season) season = snap.season;
+  if (Array.isArray(snap.hallOfFame)) { hallOfFame.length = 0; hallOfFame.push(...snap.hallOfFame); }
+  chain.best = snap.chainBest || 0;
+  return true;
 }
 setInterval(() => {
   if (Date.now() - season.startedAt >= SEASON_SEC * 1000) endSeason();
@@ -524,6 +550,24 @@ app.get("/api/room/state", (req, res) => {
   if (!room) return res.status(404).json({ error: "salon introuvable" });
   res.json(roomView(room, req.query?.playerId));
 });
+
+// --- Démarrage : restaure l'état persistant puis sauvegarde périodiquement ----
+(async () => {
+  if (persistenceEnabled) {
+    const snap = await loadSnapshot();
+    if (hydrate(snap)) {
+      console.log(`[persist] ✅ état restauré (saison ${season.number}, ${cities.size} villes, record chaîne ${chain.best})`);
+    } else {
+      console.log("[persist] aucune sauvegarde trouvée — démarrage neuf");
+      saveSnapshot(buildSnapshot());
+    }
+    const saveSec = Number(process.env.SAVE_SEC || 20);
+    setInterval(() => saveSnapshot(buildSnapshot()), saveSec * 1000);
+    console.log(`[persist] Supabase activé (sauvegarde toutes les ${saveSec}s)`);
+  } else {
+    console.log("[persist] désactivé (état en mémoire) — définis SUPABASE_URL + SUPABASE_KEY pour persister");
+  }
+})();
 
 app.listen(PORT, () => {
   console.log(`RELAIS ✨ sur http://localhost:${PORT} (hot-potato ${HOT_SEC}s)`);
