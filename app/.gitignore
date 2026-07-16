@@ -2,3 +2,11 @@ node_modules/
 .expo/
 *.log
 .DS_Store
+
+# Secrets store — NE JAMAIS committer
+google-play-key.json
+*.p8
+*.p12
+*.jks
+*.keystore
+credentials.json
