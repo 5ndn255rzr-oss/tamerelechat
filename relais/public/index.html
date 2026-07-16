@@ -31,6 +31,19 @@
   button.primary:active { transform: scale(.98); }
   .bannote { display:none; margin-top:10px; text-align:center; font-size:13px; font-weight:800; color:#fff;
     background:linear-gradient(90deg,#e7405f,#ff7a1a); border-radius:12px; padding:9px; }
+  .revivebtn { width:100%; margin-top:8px; padding:13px; border:0; border-radius:14px; cursor:pointer;
+    font-size:15px; font-weight:800; color:#12101a; background:linear-gradient(135deg,#ffd54a,var(--gold)); }
+  .revivebtn:active { transform:translateY(1px); }
+  .actionrow { display:flex; gap:10px; margin-top:14px; }
+  .actbtn { flex:1; padding:13px; border:1px solid var(--line); border-radius:14px; cursor:pointer;
+    font-size:14px; font-weight:800; color:#fff; background:#221c3d; }
+  .actbtn:active { transform:translateY(1px); }
+  .modal { position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(6,4,14,.72); }
+  .modal.on { display:flex; }
+  .adbox { width:86%; max-width:340px; background:#0c0a16; border:1px solid var(--line); border-radius:20px; padding:30px; text-align:center; }
+  .adlabel { font-size:11px; letter-spacing:3px; color:#6f679a; }
+  .adcount { font-family:monospace; font-size:54px; font-weight:800; color:var(--gold); margin:8px 0; }
+  .adsub { font-size:13px; color:#9a92c0; }
   .ghostbtn { background:#221c3d; color:#c9c2e8; border:1px solid var(--line); border-radius:14px;
     padding:12px; font-size:14px; font-weight:700; width:100%; cursor:pointer; }
   .ghostbtn:active { transform: scale(.98); }
@@ -146,6 +159,7 @@
       <div class="arena-hint">clic / espace / touch — plus ton rang monte, plus c'est serré</div>
     </div>
     <div id="banNote" class="bannote"></div>
+    <button id="reviveBtn" class="revivebtn" style="display:none">📺 Regarder une pub pour reprendre</button>
 
     <div id="leagueCard" class="leaguecard"></div>
 
@@ -171,13 +185,20 @@
       </div>
     </div>
 
+    <div class="actionrow">
+      <button id="shareBtn" class="actbtn">😼 Défie tes potes</button>
+      <a href="/humaine.html" class="actbtn" style="text-decoration:none;display:flex;align-items:center;justify-content:center">🤝 Chaîne Humaine →</a>
+    </div>
     <div class="online" id="online"></div>
-    <div style="text-align:center;margin-top:14px">
-      <a href="/humaine.html" style="color:#a99bff;font-size:13px;font-weight:700;text-decoration:none">
-        😼 Jouer à la Chaîne Humaine (entre potes) →
-      </a>
+    <div style="text-align:center;margin-top:12px">
+      <a href="/privacy.html" style="color:#6f679a;font-size:12px">Politique de confidentialité</a>
     </div>
   </div>
+</div>
+
+<!-- Fausse pub (remplacée par le SDK récompensé AdMob en prod) -->
+<div class="modal" id="adModal">
+  <div class="adbox"><div class="adlabel">PUBLICITÉ</div><div class="adcount" id="adCount">5</div><div class="adsub">récompense dans quelques secondes…</div></div>
 </div>
 
 <script>
@@ -290,6 +311,7 @@ function applyMe(m) {
   // progression d'XP dans le palier courant (approx visuelle)
   const pct = m.nextTier ? Math.min(100, 100 - (m.nextTier.xpNeeded / (m.nextTier.xpNeeded + m.xp + 1)) * 100) : 100;
   $("xpFill").style.width = Math.max(4, pct) + "%";
+  applyCosmetics();
 }
 
 function newZone() {
@@ -351,11 +373,44 @@ function applyBan(body) {
   if (secs > 0) { bannedUntil = Date.now() + secs * 1000; }
 }
 setInterval(() => {
-  const el = $("banNote"); if (!el) return;
+  const el = $("banNote"), rb = $("reviveBtn"); if (!el) return;
   const left = Math.ceil((bannedUntil - Date.now()) / 1000);
-  if (left > 0) { el.style.display = "block"; el.textContent = `🟥 SUSPENDU ${left}s — sabotage détecté, tes ratés ne comptent plus`; }
-  else el.style.display = "none";
+  if (left > 0) { el.style.display = "block"; el.textContent = `🟥 SUSPENDU ${left}s — sabotage détecté, tes ratés ne comptent plus`; if (rb) rb.style.display = "block"; }
+  else { el.style.display = "none"; if (rb) rb.style.display = "none"; }
 }, 250);
+
+// --- Pub récompensée : revive du carton (en prod : SDK AdMob rewarded) ---
+function fakeAd() {
+  return new Promise((resolve) => {
+    const m = $("adModal"), c = $("adCount"); let n = 5; m.classList.add("on"); c.textContent = n;
+    const t = setInterval(() => { n--; c.textContent = n; if (n <= 0) { clearInterval(t); m.classList.remove("on"); resolve(); } }, 700);
+  });
+}
+$("reviveBtn").onclick = async () => {
+  await fakeAd();
+  try {
+    const rw = await post("/api/ad/reward", { playerId });        // en prod : callback SSV serveur
+    const r = await post("/api/revive", { playerId, rewardToken: rw.rewardToken });
+    bannedUntil = 0; applyMe(r.me); floatText("REPRISE ✨", "#2ecc71");
+    $("banNote").style.display = "none"; $("reviveBtn").style.display = "none";
+  } catch (e) {}
+};
+
+// --- Partage (viralité) ---
+$("shareBtn").onclick = async () => {
+  const txt = `Je suis ${me?.tier || "Bronze"} sur RELAIS ✨ et ${me?.city || "ma ville"} grimpe au classement mondial. Tu tiens combien de temps la chaîne ? 😼`;
+  try {
+    if (navigator.share) await navigator.share({ title: "RELAIS ✨", text: txt, url: location.origin });
+    else { await navigator.clipboard.writeText(txt + " " + location.origin); $("online").textContent = "🔗 lien copié — envoie-le à tes potes !"; }
+  } catch (e) {}
+};
+
+// --- Skin d'étincelle équipé (cosmétique) ---
+const SPARK_COLORS = { default: "#f1c40f", neon: "#a99bff", fire: "#ff7a1a", ice: "#5ad1ff", gold: "#ffd700" };
+function applyCosmetics() {
+  const c = SPARK_COLORS[me?.equipped?.spark] || SPARK_COLORS.default;
+  const n = $("needle"); if (n) n.style.boxShadow = `0 0 12px #fff, 0 0 24px ${c}`;
+}
 
 function flash(cls) {
   const a = $("arena");

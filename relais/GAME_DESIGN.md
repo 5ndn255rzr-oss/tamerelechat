@@ -104,7 +104,22 @@ vivant (bots d'autres villes). Voir `README.md` pour lancer.
       passes refusées et cassures ignorées → la chaîne mondiale est protégée. Le
       carton vit sur le **compte** (se reconnecter ne l'annule pas).
 
-### Prochaines étapes
+## Monétisation (hybrid-casual, 100 % équitable — aucun pay-to-win)
+- [x] **Pub récompensée** : « revive » du carton rouge. `/api/ad/reward` (émet un
+      jeton ; en prod = callback SSV AdMob) + `/api/revive` (consomme le jeton, lève
+      la suspension une fois). L'escalade des bans persiste (anti-abus).
+- [x] **Boutique cosmétique** : skins d'étincelle + packs de vannes (`/api/shop`,
+      `/api/buy`, `/api/equip`). Ownership sur le compte, persistée. Achat réel via
+      l'IAP du store (stub en proto). Cosmétique + son uniquement.
+- [x] **Viralité** : boutons « Défie tes potes » (web/démo) et « Invite tes potes »
+      (Chaîne Humaine) via Web Share API.
+- [x] **Mesure de rétention** : `firstDay`/`days`/`lastSeen` par compte + `/api/metrics`
+      (comptes, actifs 24 h, J1/J7 cohortes).
+- [x] **Politique de confidentialité** (`/privacy.html`, modèle à compléter — requis pour les pubs).
+- [ ] **Pass de saison** — *à brancher quand J7 > ~15 %* (repose sur le système de saisons déjà là).
+
+### À faire avant / après la sortie
+- [ ] Brancher le vrai SDK AdMob (rewarded) + IAP store (StoreKit/RevenueCat) dans l'app Expo
 - [ ] Auth forte (e-mail / OAuth) au lieu du token local
 - [ ] Modération des pseudos, limite de création de comptes (anti-spam mémoire)
 - [ ] Sons/haptique enrichis, thème clair

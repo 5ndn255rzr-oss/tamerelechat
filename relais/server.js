@@ -195,8 +195,14 @@ function hydrate(snap) {
     accounts.clear();
     for (const a of snap.accounts) {
       const { token, ...rest } = a;
-      accounts.set(token, { name: rest.name, xp: rest.xp || 0, bestStreak: rest.bestStreak || 0,
-        breaks: rest.breaks || 0, offenses: rest.offenses || 0, createdAt: rest.createdAt || Date.now() });
+      accounts.set(token, {
+        name: rest.name, xp: rest.xp || 0, bestStreak: rest.bestStreak || 0,
+        breaks: rest.breaks || 0, offenses: rest.offenses || 0, createdAt: rest.createdAt || Date.now(),
+        bannedUntil: rest.bannedUntil || 0, breakTimes: Array.isArray(rest.breakTimes) ? rest.breakTimes : [],
+        revives: rest.revives || 0, owned: Array.isArray(rest.owned) ? rest.owned : [],
+        equipped: rest.equipped || { spark: "default", taunt: "default" },
+        firstDay: rest.firstDay, lastSeen: rest.lastSeen || 0, days: Array.isArray(rest.days) ? rest.days : [],
+      });
     }
   }
   if (snap.season) season = snap.season;
@@ -304,6 +310,9 @@ function publicPlayer(p) {
     accuracy: denom ? Math.round((a.xp / denom) * 100) : 100,
     banned: banMs > 0,
     bannedFor: Math.ceil(banMs / 1000),
+    revives: a.revives || 0,
+    equipped: a.equipped || { spark: "default", taunt: "default" },
+    owned: a.owned || [],
     tier: tier.name,
     mult: tier.mult,
     difficulty: { sweep: tier.sweep, zone: tier.zone },
@@ -324,19 +333,132 @@ app.post("/api/join", (req, res) => {
   } else {
     token = newToken();
     account = { name, xp: 0, bestStreak: 0, breaks: 0, offenses: 0, createdAt: Date.now(),
-      bannedUntil: 0, breakTimes: [] };
+      bannedUntil: 0, breakTimes: [], revives: 0, owned: [], equipped: { spark: "default", taunt: "default" } };
     accounts.set(token, account);
   }
-  // le carton/l'historique de cassures vivent sur le COMPTE : impossible de
-  // les réinitialiser en se reconnectant (nouvelle session).
+  // Défauts pour les comptes restaurés d'une ancienne sauvegarde.
   if (account.bannedUntil === undefined) account.bannedUntil = 0;
   if (!Array.isArray(account.breakTimes)) account.breakTimes = [];
+  if (!Array.isArray(account.owned)) account.owned = [];
+  if (!account.equipped) account.equipped = { spark: "default", taunt: "default" };
+
+  // Rétention : jour de création + jours d'activité (cohortes J1/J7).
+  const day = Math.floor(Date.now() / 86400000);
+  account.firstDay = account.firstDay ?? day;
+  account.lastSeen = Date.now();
+  account.days = account.days || [];
+  if (!account.days.includes(day)) account.days.push(day);
 
   const id = Math.random().toString(36).slice(2, 10);
-  const player = { account, name, city, country, score: 0, passes: 0, streak: 0, lastPassAt: 0 };
+  const player = { account, name, city, country, score: 0, passes: 0, streak: 0, lastPassAt: 0,
+    rewardToken: null, rewardExp: 0 };
   players.set(id, player);
   console.log(`[join] ${name} (${city}, ${country}) rang ${account.xp}xp -> ${id}`);
   res.json({ playerId: id, token, me: publicPlayer(player) });
+});
+
+// --- Pub récompensée : "revive" du carton rouge ------------------------------
+// Flux : le client montre une pub -> son SDK confirme la récompense -> on émet un
+// jeton -> /api/revive consomme le jeton et lève la suspension une fois.
+// EN PROD : /api/ad/reward doit être appelé par la Server-Side Verification
+// d'AdMob (pas par le client) pour empêcher la triche. Ici (proto) le client
+// l'appelle après le callback "rewarded".
+app.post("/api/ad/reward", (req, res) => {
+  const p = players.get(req.body?.playerId);
+  if (!p) return res.status(404).json({ error: "joueur inconnu" });
+  p.rewardToken = newToken();
+  p.rewardExp = Date.now() + 90000; // 90s pour l'utiliser
+  res.json({ ok: true, rewardToken: p.rewardToken });
+});
+
+app.post("/api/revive", (req, res) => {
+  const p = players.get(req.body?.playerId);
+  if (!p) return res.status(404).json({ error: "joueur inconnu" });
+  const { rewardToken } = req.body || {};
+  if (!rewardToken || rewardToken !== p.rewardToken || Date.now() > p.rewardExp) {
+    return res.status(403).json({ error: "récompense invalide (regarde la pub)" });
+  }
+  p.rewardToken = null; // consommé
+  const a = p.account;
+  a.bannedUntil = 0;
+  a.breakTimes = [];
+  a.revives = (a.revives || 0) + 1;
+  // L'escalade reste : la prochaine récidive rebanne plus longtemps (anti-abus).
+  console.log(`[revive] ${a.name} a levé son carton via pub (total ${a.revives})`);
+  res.json({ ok: true, me: publicPlayer(p) });
+});
+
+// --- Métriques de rétention (usage interne : mesurer J1/J7) -------------------
+app.get("/api/metrics", (_req, res) => {
+  const today = Math.floor(Date.now() / 86400000);
+  const all = [...accounts.values()];
+  const eligible1 = all.filter((a) => (a.firstDay ?? today) <= today - 1);
+  const eligible7 = all.filter((a) => (a.firstDay ?? today) <= today - 7);
+  const ret1 = eligible1.filter((a) => (a.days || []).includes((a.firstDay ?? 0) + 1)).length;
+  const ret7 = eligible7.filter((a) => (a.days || []).some((d) => d >= (a.firstDay ?? 0) + 7)).length;
+  res.json({
+    accounts: all.length,
+    activeLast24h: all.filter((a) => Date.now() - (a.lastSeen || 0) < 86400000).length,
+    J1: eligible1.length ? +(100 * ret1 / eligible1.length).toFixed(1) : null,
+    J7: eligible7.length ? +(100 * ret7 / eligible7.length).toFixed(1) : null,
+    J1_sample: eligible1.length,
+    J7_sample: eligible7.length,
+  });
+});
+
+// --- BOUTIQUE COSMÉTIQUE (100% non pay-to-win : apparence + son uniquement) ----
+// price en centimes (affichage). L'achat réel se fait via l'IAP du store
+// (StoreKit/RevenueCat) qui valide le reçu ; ici (proto) /api/buy débloque
+// directement. Les items "default" sont gratuits et toujours possédés.
+const SHOP = {
+  sparks: [
+    { id: "default", name: "Étincelle classique", price: 0, color: "#ffc93d" },
+    { id: "neon", name: "Néon violet", price: 199, color: "#a99bff" },
+    { id: "fire", name: "Brasier", price: 199, color: "#ff7a1a" },
+    { id: "ice", name: "Glace", price: 199, color: "#5ad1ff" },
+    { id: "gold", name: "Or massif", price: 399, color: "#ffd700" },
+  ],
+  taunts: [
+    { id: "default", name: "ta mère le chat", price: 0, phrase: "ta mère le chat" },
+    { id: "grandma", name: "Pack Mamie 👵", price: 299, phrase: "allô la Terre, réveille-toi enfin" },
+    { id: "drill", name: "Pack Sergent 🪖", price: 299, phrase: "debout là-dedans, bouge-toi" },
+    { id: "classy", name: "Pack Chic 🎩", price: 299, phrase: "quelle déception, très cher" },
+  ],
+};
+const SLOT = { sparks: "spark", taunts: "taunt" }; // catégorie boutique -> emplacement équipé
+const shopItem = (type, id) => (SHOP[type] || []).find((i) => i.id === id);
+
+app.get("/api/shop", (req, res) => {
+  const p = players.get(req.query?.playerId);
+  const a = p?.account;
+  res.json({ shop: SHOP, owned: a?.owned || [], equipped: a?.equipped || { spark: "default", taunt: "default" } });
+});
+
+app.post("/api/buy", (req, res) => {
+  const p = players.get(req.body?.playerId);
+  if (!p) return res.status(404).json({ error: "joueur inconnu" });
+  const { type, itemId } = req.body || {};
+  const item = shopItem(type, itemId);
+  if (!item) return res.status(400).json({ error: "article introuvable" });
+  const a = p.account;
+  // En prod : vérifier ici le reçu d'achat du store avant de débloquer.
+  if (item.price > 0 && !a.owned.includes(itemId)) a.owned.push(itemId);
+  a.equipped[SLOT[type]] = itemId; // on équipe direct après achat
+  console.log(`[shop] ${a.name} a acheté/équipé ${type}:${itemId}`);
+  res.json({ ok: true, me: publicPlayer(p) });
+});
+
+app.post("/api/equip", (req, res) => {
+  const p = players.get(req.body?.playerId);
+  if (!p) return res.status(404).json({ error: "joueur inconnu" });
+  const { type, itemId } = req.body || {};
+  const item = shopItem(type, itemId);
+  if (!item) return res.status(400).json({ error: "article introuvable" });
+  const a = p.account;
+  const ownsIt = item.price === 0 || a.owned.includes(itemId);
+  if (!ownsIt) return res.status(403).json({ error: "article non possédé" });
+  a.equipped[SLOT[type]] = itemId;
+  res.json({ ok: true, me: publicPlayer(p) });
 });
 
 // --- Passe réussie : banque points + XP, allonge la chaîne, nourrit le territoire
