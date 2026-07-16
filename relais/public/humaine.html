@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>RELAIS — Chaîne Humaine 😼</title>
+<title>RELAIS — Chaîne Humaine 🔥</title>
 <style>
   :root {
     --bg:#0e0b18; --card:#1a1630; --card2:#221c3d; --line:#2f2850; --ink:#f3f0ff;
@@ -89,7 +89,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">CHAÎNE HUMAINE 😼</div>
+  <div class="logo">CHAÎNE HUMAINE 🔥</div>
   <div class="tag">refile l'étincelle ou t'es cramé</div>
 
   <!-- 1. Accueil -->
@@ -111,7 +111,7 @@
       <div class="c" id="lobbyCode">····</div>
     </div>
     <div class="sub">Partage ce code. Tout le monde ouvre cette page et le tape.</div>
-    <button class="btn ghost" id="inviteBtn">😼 Inviter tes potes</button>
+    <button class="btn ghost" id="inviteBtn">🔥 Inviter tes potes</button>
     <div class="players" id="lobbyPlayers"></div>
     <button class="btn primary" id="startBtn" disabled>Démarrer (hôte)</button>
     <div class="toast" id="lobbyMsg"></div>
@@ -157,7 +157,7 @@ function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch
 function show(id) { document.querySelectorAll(".screen").forEach((s) => s.classList.remove("on")); $(id).classList.add("on"); }
 
 $("inviteBtn").addEventListener("click", async () => {
-  const txt = `Rejoins ma partie de Chaîne Humaine sur RELAIS 😼 — code du salon : ${code}`;
+  const txt = `Rejoins ma partie de Chaîne Humaine sur RELAIS 🔥 — code du salon : ${code}`;
   try {
     if (navigator.share) await navigator.share({ title: "RELAIS — Chaîne Humaine", text: txt, url: location.origin + "/humaine.html" });
     else { await navigator.clipboard.writeText(txt + " " + location.origin + "/humaine.html"); $("lobbyMsg").textContent = "🔗 invitation copiée !"; }
@@ -235,10 +235,10 @@ function renderRoom(room) {
   if (room.lastLoss && room.lastLoss.id !== seenLoss) {
     seenLoss = room.lastLoss.id;
     if (room.lastLoss.playerId === playerId) {
-      say("ta mère le chat");           // 😼 la sanction, pour le maillon cramé
+      say("trop tard, t'as lâché la chaîne");           // la sanction, pour le maillon grillé
       vibrate([120, 80, 200]);
       redFlash(); document.body.classList.add("doomed");
-      $("doom").textContent = `😼 CRAMÉ — tu as lâché une chaîne de ${room.lastLoss.brokeAt}`;
+      $("doom").textContent = `💥 GRILLÉ — tu as lâché une chaîne de ${room.lastLoss.brokeAt}`;
       setTimeout(() => document.body.classList.remove("doomed"), 900);
     } else {
       $("doom").textContent = `🔥 ${room.lastLoss.name} s'est fait cramer (chaîne ${room.lastLoss.brokeAt})`;

@@ -419,7 +419,7 @@ const SHOP = {
     { id: "gold", name: "Or massif", price: 399, color: "#ffd700" },
   ],
   taunts: [
-    { id: "default", name: "ta mère le chat", price: 0, phrase: "ta mère le chat" },
+    { id: "default", name: "Classique", price: 0, phrase: "trop tard, t'as lâché la chaîne" },
     { id: "grandma", name: "Pack Mamie 👵", price: 299, phrase: "allô la Terre, réveille-toi enfin" },
     { id: "drill", name: "Pack Sergent 🪖", price: 299, phrase: "debout là-dedans, bouge-toi" },
     { id: "classy", name: "Pack Chic 🎩", price: 299, phrase: "quelle déception, très cher" },
@@ -663,21 +663,20 @@ if (process.env.RELAIS_NO_BOTS !== "1") {
 // ----------------------------------------------------------------------------
 // Des potes rejoignent un salon (code à 4 lettres). L'étincelle passe de main
 // en main : quand tu la reçois, tu dois la refiler à un autre AVANT la fin du
-// chrono, sinon la chaîne casse et c'est TOI le maillon cramé -> ton écran te
-// dit « ta mère le chat » 😼.
+// chrono, sinon la chaîne casse et c'est TOI le maillon grillé.
 //
 // Deux façons de jouer :
 //  - WEB (humaine.html) : jouable au navigateur, sanction vocale.
 //  - NATIF (app Expo) : les joueurs enregistrent un token push -> quand
 //    l'étincelle t'arrive, ton iPhone SONNE même verrouillé, et si tu la lâches
-//    la notif de sanction joue le son "ta mère le chat". C'est le vrai délire.
+//    tu reçois la notif de sanction.
 // ============================================================================
 const HOT_SEC = Number(process.env.HOT_POTATO_SEC || 5);
 const rooms = new Map(); // code -> room
 
-// --- Envoi de notif push via Expo (repris du serveur "ta mère le chat") -------
+// --- Envoi de notif push via Expo --------------------------------------------
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
-const SANCTION_SOUND = "snd_tamerelechat.caf";
+const SANCTION_SOUND = "snd_troptard.caf";
 async function sendPush(token, { title, body, sound, data }) {
   if (!token) return; // joueur web sans token natif : on ignore silencieusement
   const message = {
@@ -740,10 +739,10 @@ function onTimeout(room) {
   room.chain = 0;
   room.lastLoss = { id: pid(), playerId: loserId, name: loser?.name || "?", brokeAt: broke };
   console.log(`[humaine] ${room.code} : ${room.lastLoss.name} s'est fait cramer (chaîne ${broke})`);
-  // 😼 sanction sonore sur le téléphone du maillon cramé (même verrouillé)
+  // sanction sonore sur le téléphone du maillon grillé (même verrouillé)
   sendPush(loser?.token, {
-    title: "😼 CRAMÉ",
-    body: `t'as lâché l'étincelle (chaîne de ${broke})... ta mère le chat`,
+    title: "💥 GRILLÉ",
+    body: `t'as lâché l'étincelle (chaîne de ${broke})... trop tard !`,
     sound: SANCTION_SOUND,
     data: { type: "sanction", room: room.code },
   });

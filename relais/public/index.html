@@ -186,7 +186,7 @@
     </div>
 
     <div class="actionrow">
-      <button id="shareBtn" class="actbtn">😼 Défie tes potes</button>
+      <button id="shareBtn" class="actbtn">🔥 Défie tes potes</button>
       <a href="/humaine.html" class="actbtn" style="text-decoration:none;display:flex;align-items:center;justify-content:center">🤝 Chaîne Humaine →</a>
     </div>
     <div class="online" id="online"></div>
@@ -398,7 +398,7 @@ $("reviveBtn").onclick = async () => {
 
 // --- Partage (viralité) ---
 $("shareBtn").onclick = async () => {
-  const txt = `Je suis ${me?.tier || "Bronze"} sur RELAIS ✨ et ${me?.city || "ma ville"} grimpe au classement mondial. Tu tiens combien de temps la chaîne ? 😼`;
+  const txt = `Je suis ${me?.tier || "Bronze"} sur RELAIS ✨ et ${me?.city || "ma ville"} grimpe au classement mondial. Tu tiens combien de temps la chaîne ? 🔥`;
   try {
     if (navigator.share) await navigator.share({ title: "RELAIS ✨", text: txt, url: location.origin });
     else { await navigator.clipboard.writeText(txt + " " + location.origin); $("online").textContent = "🔗 lien copié — envoie-le à tes potes !"; }

@@ -1,9 +1,8 @@
 // Écran natif « RELAIS — Chaîne Humaine » (hot-potato entre potes).
 //
-// Différence clé avec la version web : ici chaque joueur enregistre son token
-// push Expo. Quand l'étincelle t'arrive, ton iPhone SONNE même verrouillé
-// (notif "✨ à toi"), et si tu la lâches, la notif de sanction joue le son
-// "ta mère le chat" 😼. C'est le serveur relais/ qui envoie ces push.
+// Chaque joueur enregistre son token push Expo. Quand l'étincelle t'arrive, ton
+// iPhone SONNE même verrouillé (notif "✨ à toi"), et si tu la lâches, tu reçois
+// la notif « t'as lâché la chaîne ». C'est le serveur relais/ qui envoie ces push.
 //
 import { useEffect, useRef, useState } from "react";
 import {
@@ -113,7 +112,7 @@ export default function Relais({ goBack }) {
     return (
       <SafeAreaView style={s.root}>
         <ScrollView contentContainerStyle={s.center}>
-          <Text style={s.logo}>CHAÎNE HUMAINE 😼</Text>
+          <Text style={s.logo}>RELAIS ✨</Text>
           <Text style={s.tag}>refile l'étincelle ou t'es cramé</Text>
           <TextInput style={s.input} placeholder="Ton blaze" placeholderTextColor="#888"
             value={name} onChangeText={setName} maxLength={18} />
@@ -127,7 +126,7 @@ export default function Relais({ goBack }) {
             <Text style={s.btnTxt}>Rejoindre</Text>
           </Pressable>
           {busy && <ActivityIndicator color="#fff" style={{ marginTop: 14 }} />}
-          <Pressable onPress={goBack}><Text style={s.back}>← retour</Text></Pressable>
+          {goBack && <Pressable onPress={goBack}><Text style={s.back}>← retour</Text></Pressable>}
         </ScrollView>
       </SafeAreaView>
     );
@@ -194,11 +193,11 @@ export default function Relais({ goBack }) {
 
         {loss ? (
           <Text style={s.doom}>
-            {iLost ? `😼 CRAMÉ — chaîne de ${loss.brokeAt} lâchée` : `🔥 ${loss.name} s'est fait cramer (${loss.brokeAt})`}
+            {iLost ? `💥 GRILLÉ — chaîne de ${loss.brokeAt} lâchée` : `🔥 ${loss.name} a lâché la chaîne (${loss.brokeAt})`}
           </Text>
         ) : null}
         <Text style={s.msg}>{msg}</Text>
-        <Pressable onPress={goBack}><Text style={s.back}>← quitter</Text></Pressable>
+        {goBack && <Pressable onPress={goBack}><Text style={s.back}>← quitter</Text></Pressable>}
       </ScrollView>
     </SafeAreaView>
   );
