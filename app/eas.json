@@ -22,9 +22,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "REMPLACE_PAR_TON_EMAIL_APPLE",
+        "appleId": "rom.clavel@icloud.com",
         "ascAppId": "REMPLACE_PAR_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "REMPLACE_PAR_TON_TEAM_ID"
+        "appleTeamId": "9S32X2PTHR"
       },
       "android": {
         "serviceAccountKeyPath": "./google-play-key.json",
