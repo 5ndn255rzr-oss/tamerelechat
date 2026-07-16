@@ -23,7 +23,7 @@
     "production": {
       "ios": {
         "appleId": "rom.clavel@icloud.com",
-        "ascAppId": "REMPLACE_PAR_APP_STORE_CONNECT_APP_ID",
+        "ascAppId": "6791576736",
         "appleTeamId": "9S32X2PTHR"
       },
       "android": {
