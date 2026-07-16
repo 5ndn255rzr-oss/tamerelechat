@@ -5,7 +5,6 @@
 // (notif "✨ à toi"), et si tu la lâches, la notif de sanction joue le son
 // "ta mère le chat" 😼. C'est le serveur relais/ qui envoie ces push.
 //
-// >>> À CONFIGURER : l'URL publique de ton service relais sur Render. <<<
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView,
@@ -15,7 +14,10 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 
-const RELAIS_URL = "https://relais-server.onrender.com"; // <-- remplace par ton URL Render
+// URL du serveur de jeu, injectée au build via RELAIS_URL (cf. app.config.js +
+// eas.json). Défaut = serveur Render de démo. Ne rien coder en dur ici.
+const RELAIS_URL =
+  Constants?.expoConfig?.extra?.relaisUrl || "https://relais-server.onrender.com";
 
 async function registerForPush() {
   if (!Device.isDevice) throw new Error("Il faut un vrai iPhone (pas le simulateur).");

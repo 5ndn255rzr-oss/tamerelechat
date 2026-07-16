@@ -7,21 +7,29 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": {
-        "simulator": false
-      }
+      "ios": { "simulator": false }
     },
     "preview": {
       "distribution": "internal",
-      "ios": {
-        "simulator": false
-      }
+      "env": { "RELAIS_URL": "https://relais-server.onrender.com" },
+      "ios": { "simulator": false }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": { "RELAIS_URL": "https://relais-server.onrender.com" }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "REMPLACE_PAR_TON_EMAIL_APPLE",
+        "ascAppId": "REMPLACE_PAR_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "REMPLACE_PAR_TON_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-key.json",
+        "track": "internal"
+      }
+    }
   }
 }
