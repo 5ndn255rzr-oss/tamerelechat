@@ -289,7 +289,7 @@ function publicPlayer(p) {
   const a = p.account;
   const tier = tierFor(a.xp);
   const nt = nextTier(a.xp);
-  const banMs = Math.max(0, p.bannedUntil - Date.now());
+  const banMs = Math.max(0, (a.bannedUntil || 0) - Date.now());
   const denom = a.xp + a.breaks;
   return {
     name: a.name,
@@ -323,13 +323,17 @@ app.post("/api/join", (req, res) => {
     account.name = name; // on garde xp/rang/breaks, on rafraîchit juste le pseudo
   } else {
     token = newToken();
-    account = { name, xp: 0, bestStreak: 0, breaks: 0, offenses: 0, createdAt: Date.now() };
+    account = { name, xp: 0, bestStreak: 0, breaks: 0, offenses: 0, createdAt: Date.now(),
+      bannedUntil: 0, breakTimes: [] };
     accounts.set(token, account);
   }
+  // le carton/l'historique de cassures vivent sur le COMPTE : impossible de
+  // les réinitialiser en se reconnectant (nouvelle session).
+  if (account.bannedUntil === undefined) account.bannedUntil = 0;
+  if (!Array.isArray(account.breakTimes)) account.breakTimes = [];
 
   const id = Math.random().toString(36).slice(2, 10);
-  const player = { account, name, city, country, score: 0, passes: 0, streak: 0,
-    breakTimes: [], bannedUntil: 0, lastPassAt: 0 };
+  const player = { account, name, city, country, score: 0, passes: 0, streak: 0, lastPassAt: 0 };
   players.set(id, player);
   console.log(`[join] ${name} (${city}, ${country}) rang ${account.xp}xp -> ${id}`);
   res.json({ playerId: id, token, me: publicPlayer(player) });
@@ -341,9 +345,10 @@ app.post("/api/pass", (req, res) => {
   if (!p) return res.status(404).json({ error: "joueur inconnu (rejoins d'abord)" });
 
   const now = Date.now();
+  const a = p.account;
   // Suspendu (carton anti-sabotage) : ne peut plus marquer.
-  if (p.bannedUntil > now) {
-    return res.status(403).json({ error: "suspendu", bannedFor: Math.ceil((p.bannedUntil - now) / 1000), me: publicPlayer(p) });
+  if ((a.bannedUntil || 0) > now) {
+    return res.status(403).json({ error: "suspendu", bannedFor: Math.ceil((a.bannedUntil - now) / 1000), me: publicPlayer(p) });
   }
   // Anti-triche : impossible d'enchaîner les passes plus vite qu'un humain.
   if (now - p.lastPassAt < MIN_PASS_MS) {
@@ -351,7 +356,6 @@ app.post("/api/pass", (req, res) => {
   }
   p.lastPassAt = now;
 
-  const a = p.account;
   const tier = tierFor(a.xp);
   const gained = BASE_POINTS * tier.mult;
   p.score += gained;
@@ -381,17 +385,18 @@ app.post("/api/break", (req, res) => {
   const a = p.account;
 
   // Déjà suspendu -> sa cassure est IGNORÉE (le saboteur ne peut plus nuire).
-  if (p.bannedUntil > now) {
+  // Le carton vit sur le COMPTE : se reconnecter ne le réinitialise pas.
+  if ((a.bannedUntil || 0) > now) {
     p.streak = 0;
     return res.json({ ok: true, ignored: true, chain: chain.current,
-      bannedFor: Math.ceil((p.bannedUntil - now) / 1000), me: publicPlayer(p) });
+      bannedFor: Math.ceil((a.bannedUntil - now) / 1000), me: publicPlayer(p) });
   }
 
-  // Fenêtre glissante des cassures récentes.
-  p.breakTimes = p.breakTimes.filter((t) => now - t < GRIEF_WINDOW_MS);
-  p.breakTimes.push(now);
+  // Fenêtre glissante des cassures récentes (sur le compte).
+  a.breakTimes = (a.breakTimes || []).filter((t) => now - t < GRIEF_WINDOW_MS);
+  a.breakTimes.push(now);
   a.breaks += 1;
-  const recent = p.breakTimes.length;
+  const recent = a.breakTimes.length;
 
   // Malus de score croissant avec les cassures rapprochées.
   const penalty = BREAK_PENALTY * recent;
@@ -403,8 +408,8 @@ app.post("/api/break", (req, res) => {
   if (recent >= GRIEF_TRIP) {
     a.offenses += 1;
     banSec = Math.min(120, 10 * 2 ** (a.offenses - 1)); // 10, 20, 40, 80, 120s
-    p.bannedUntil = now + banSec * 1000;
-    p.breakTimes = [];
+    a.bannedUntil = now + banSec * 1000;
+    a.breakTimes = [];
     console.log(`[carton] ${a.name} suspendu ${banSec}s (récidive #${a.offenses})`);
   }
 

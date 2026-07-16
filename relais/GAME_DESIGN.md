@@ -96,7 +96,15 @@ vivant (bots d'autres villes). Voir `README.md` pour lancer.
 - [x] **Zoom national (régions)** : `/api/country?name=` regroupe les villes d'un pays
       par région ; panneau « 🔎 régions » côté client
 
+- [x] **Comptes durables** : token renvoyé au join, pseudo + rang (xp, bestStreak)
+      gardés entre sessions/appareils, persistés dans l'instantané Supabase
+- [x] **Anti-triche** : passes trop rapprochées rejetées côté serveur (429)
+- [x] **Malus anti-sabotage** : casser la chaîne coûte des points (croissant) ; 3
+      cassures en 30 s = carton rouge (suspension 10→120 s). Pendant la suspension,
+      passes refusées et cassures ignorées → la chaîne mondiale est protégée. Le
+      carton vit sur le **compte** (se reconnecter ne l'annule pas).
+
 ### Prochaines étapes
-- [ ] Auth / comptes joueurs (garder son pseudo + son rang entre appareils)
-- [ ] Modération des pseudos + anti-triche (validation serveur des passes)
+- [ ] Auth forte (e-mail / OAuth) au lieu du token local
+- [ ] Modération des pseudos, limite de création de comptes (anti-spam mémoire)
 - [ ] Sons/haptique enrichis, thème clair
