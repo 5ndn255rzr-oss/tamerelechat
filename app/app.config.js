@@ -5,8 +5,9 @@
 // Dans le code : Constants.expoConfig.extra.relaisUrl
 const RELAIS_URL = process.env.RELAIS_URL || "https://relais-server.onrender.com";
 
-// Sons de sanction embarqués (mode « ta mère le chat » + Chaîne Humaine).
+// Sons embarqués. snd_break = son de bris joué quand la chaîne casse.
 const SOUNDS = [
+  "./assets/snd_break.wav",
   "./assets/snd_tamerelechat.caf",
   "./assets/snd_reveille.caf",
   "./assets/snd_alloterre.caf",

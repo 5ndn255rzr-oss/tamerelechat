@@ -153,6 +153,31 @@ function say(txt) {
   try { const u = new SpeechSynthesisUtterance(txt); u.lang = "fr-FR"; u.rate = 1.05; u.pitch = .9;
     speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
 }
+// Son de BRIS (la chaîne casse) — synthèse Web Audio, aucun fichier requis.
+let _actx;
+function playBreak() {
+  try {
+    _actx = _actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (_actx.state === "suspended") _actx.resume();
+    const ac = _actx, t = ac.currentTime, out = ac.destination;
+    const dur = 0.5, buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
+    const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const noise = ac.createBufferSource(); noise.buffer = buf;
+    const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1100;
+    const ng = ac.createGain(); ng.gain.setValueAtTime(0.9, t); ng.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    noise.connect(hp).connect(ng).connect(out); noise.start(t); noise.stop(t + dur);
+    const osc = ac.createOscillator(); osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(320, t); osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+    const og = ac.createGain(); og.gain.setValueAtTime(0.35, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc.connect(og).connect(out); osc.start(t); osc.stop(t + 0.24);
+    for (let k = 0; k < 4; k++) {
+      const st = t + 0.02 + Math.random() * 0.14, f = 1500 + Math.random() * 2600;
+      const o = ac.createOscillator(); o.type = "triangle"; o.frequency.setValueAtTime(f, st);
+      const g = ac.createGain(); g.gain.setValueAtTime(0.12, st); g.gain.exponentialRampToValueAtTime(0.001, st + 0.12);
+      o.connect(g).connect(out); o.start(st); o.stop(st + 0.13);
+    }
+  } catch (e) {}
+}
 function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
 function show(id) { document.querySelectorAll(".screen").forEach((s) => s.classList.remove("on")); $(id).classList.add("on"); }
 
@@ -235,7 +260,7 @@ function renderRoom(room) {
   if (room.lastLoss && room.lastLoss.id !== seenLoss) {
     seenLoss = room.lastLoss.id;
     if (room.lastLoss.playerId === playerId) {
-      say("trop tard, t'as lâché la chaîne");           // la sanction, pour le maillon grillé
+      playBreak();                                      // 🔊 la chaîne se brise (maillon grillé)
       vibrate([120, 80, 200]);
       redFlash(); document.body.classList.add("doomed");
       $("doom").textContent = `💥 GRILLÉ — tu as lâché une chaîne de ${room.lastLoss.brokeAt}`;

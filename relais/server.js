@@ -676,7 +676,7 @@ const rooms = new Map(); // code -> room
 
 // --- Envoi de notif push via Expo --------------------------------------------
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
-const SANCTION_SOUND = "snd_troptard.caf";
+const SANCTION_SOUND = "snd_break.wav"; // son de bris (la chaîne casse)
 async function sendPush(token, { title, body, sound, data }) {
   if (!token) return; // joueur web sans token natif : on ignore silencieusement
   const message = {
