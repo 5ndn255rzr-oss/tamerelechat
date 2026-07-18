@@ -207,29 +207,32 @@ let playerId = null;
 let me = null;
 let diff = { sweep: 1, zone: 0.30 };
 
-// Son de BRIS (la chaîne casse) — synthèse Web Audio, aucun fichier requis.
+// Sons de BRIS (la chaîne casse) — synthèse Web Audio, 4 variantes (cosmétique).
 let _actx;
-function playBreak() {
+function _ac() { _actx = _actx || new (window.AudioContext || window.webkitAudioContext)(); if (_actx.state === "suspended") _actx.resume(); return _actx; }
+function _noise(a, t, dur, hpF, lpF, vol) {
+  const buf = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate);
+  const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(); src.buffer = buf; let n = src;
+  if (hpF) { const f = a.createBiquadFilter(); f.type = "highpass"; f.frequency.value = hpF; n.connect(f); n = f; }
+  if (lpF) { const f = a.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = lpF; n.connect(f); n = f; }
+  const g = a.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  n.connect(g).connect(a.destination); src.start(t); src.stop(t + dur);
+}
+function _tone(a, t, type, f0, f1, dur, vol) {
+  const o = a.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t);
+  if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = a.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+function playBreak(kind) {
+  kind = kind || (me && me.equipped && me.equipped.break) || "glass";
   try {
-    _actx = _actx || new (window.AudioContext || window.webkitAudioContext)();
-    if (_actx.state === "suspended") _actx.resume();
-    const ac = _actx, t = ac.currentTime, out = ac.destination;
-    const dur = 0.5, buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
-    const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const noise = ac.createBufferSource(); noise.buffer = buf;
-    const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1100;
-    const ng = ac.createGain(); ng.gain.setValueAtTime(0.9, t); ng.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    noise.connect(hp).connect(ng).connect(out); noise.start(t); noise.stop(t + dur);
-    const osc = ac.createOscillator(); osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(320, t); osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
-    const og = ac.createGain(); og.gain.setValueAtTime(0.35, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-    osc.connect(og).connect(out); osc.start(t); osc.stop(t + 0.24);
-    for (let k = 0; k < 4; k++) {
-      const st = t + 0.02 + Math.random() * 0.14, f = 1500 + Math.random() * 2600;
-      const o = ac.createOscillator(); o.type = "triangle"; o.frequency.setValueAtTime(f, st);
-      const g = ac.createGain(); g.gain.setValueAtTime(0.12, st); g.gain.exponentialRampToValueAtTime(0.001, st + 0.12);
-      o.connect(g).connect(out); o.start(st); o.stop(st + 0.13);
-    }
+    const a = _ac(), t = a.currentTime;
+    if (kind === "chain") { _tone(a, t, "square", 90, 45, 0.18, 0.3); [180,250,330,470].forEach((f,i)=>_tone(a,t+i*0.03,"triangle",f,f*0.6,0.14,0.18)); _noise(a,t,0.12,2500,0,0.3); }
+    else if (kind === "thunder") { _noise(a,t,0.85,0,380,0.9); _tone(a,t,"sine",85,28,0.7,0.55); _noise(a,t,0.08,1800,0,0.4); }
+    else if (kind === "crystal") { [2100,2650,3300,4200,5200].forEach((f,i)=>_tone(a,t+i*0.015,"sine",f,null,0.6-i*0.05,0.13)); _noise(a,t,0.12,3000,0,0.25); }
+    else { _noise(a,t,0.5,1100,0,0.9); _tone(a,t,"sawtooth",320,55,0.22,0.35); for (let k=0;k<4;k++) _tone(a,t+0.02+Math.random()*0.14,"triangle",1500+Math.random()*2600,null,0.12,0.12); }
   } catch (e) {}
 }
 

@@ -200,7 +200,7 @@ function hydrate(snap) {
         breaks: rest.breaks || 0, offenses: rest.offenses || 0, createdAt: rest.createdAt || Date.now(),
         bannedUntil: rest.bannedUntil || 0, breakTimes: Array.isArray(rest.breakTimes) ? rest.breakTimes : [],
         revives: rest.revives || 0, owned: Array.isArray(rest.owned) ? rest.owned : [],
-        equipped: rest.equipped || { spark: "default", taunt: "default" },
+        equipped: rest.equipped || { spark: "default", break: "glass" },
         firstDay: rest.firstDay, lastSeen: rest.lastSeen || 0, days: Array.isArray(rest.days) ? rest.days : [],
       });
     }
@@ -311,7 +311,7 @@ function publicPlayer(p) {
     banned: banMs > 0,
     bannedFor: Math.ceil(banMs / 1000),
     revives: a.revives || 0,
-    equipped: a.equipped || { spark: "default", taunt: "default" },
+    equipped: a.equipped || { spark: "default", break: "glass" },
     owned: a.owned || [],
     tier: tier.name,
     mult: tier.mult,
@@ -333,14 +333,15 @@ app.post("/api/join", (req, res) => {
   } else {
     token = newToken();
     account = { name, xp: 0, bestStreak: 0, breaks: 0, offenses: 0, createdAt: Date.now(),
-      bannedUntil: 0, breakTimes: [], revives: 0, owned: [], equipped: { spark: "default", taunt: "default" } };
+      bannedUntil: 0, breakTimes: [], revives: 0, owned: [], equipped: { spark: "default", break: "glass" } };
     accounts.set(token, account);
   }
   // Défauts pour les comptes restaurés d'une ancienne sauvegarde.
   if (account.bannedUntil === undefined) account.bannedUntil = 0;
   if (!Array.isArray(account.breakTimes)) account.breakTimes = [];
   if (!Array.isArray(account.owned)) account.owned = [];
-  if (!account.equipped) account.equipped = { spark: "default", taunt: "default" };
+  if (!account.equipped) account.equipped = { spark: "default", break: "glass" };
+  if (!account.equipped.break) account.equipped.break = "glass"; // migration ancien "taunt"
 
   // Rétention : jour de création + jours d'activité (cohortes J1/J7).
   const day = Math.floor(Date.now() / 86400000);
@@ -418,20 +419,22 @@ const SHOP = {
     { id: "ice", name: "Glace", price: 199, color: "#5ad1ff" },
     { id: "gold", name: "Or massif", price: 399, color: "#ffd700" },
   ],
-  taunts: [
-    { id: "default", name: "Classique", price: 0, phrase: "trop tard, t'as lâché la chaîne" },
-    { id: "grandma", name: "Pack Mamie 👵", price: 299, phrase: "allô la Terre, réveille-toi enfin" },
-    { id: "drill", name: "Pack Sergent 🪖", price: 299, phrase: "debout là-dedans, bouge-toi" },
-    { id: "classy", name: "Pack Chic 🎩", price: 299, phrase: "quelle déception, très cher" },
+  // Sons de bris joués quand la chaîne casse (cosmétique audio).
+  breaks: [
+    { id: "glass", name: "Verre brisé", price: 0, emoji: "🔨" },
+    { id: "chain", name: "Chaîne rompue", price: 199, emoji: "⛓️" },
+    { id: "thunder", name: "Tonnerre", price: 299, emoji: "⚡" },
+    { id: "crystal", name: "Cristal", price: 299, emoji: "💎" },
   ],
 };
-const SLOT = { sparks: "spark", taunts: "taunt" }; // catégorie boutique -> emplacement équipé
+const SLOT = { sparks: "spark", breaks: "break" }; // catégorie boutique -> emplacement équipé
+const DEFAULT_EQUIP = { spark: "default", break: "glass" };
 const shopItem = (type, id) => (SHOP[type] || []).find((i) => i.id === id);
 
 app.get("/api/shop", (req, res) => {
   const p = players.get(req.query?.playerId);
   const a = p?.account;
-  res.json({ shop: SHOP, owned: a?.owned || [], equipped: a?.equipped || { spark: "default", taunt: "default" } });
+  res.json({ shop: SHOP, owned: a?.owned || [], equipped: a?.equipped || { ...DEFAULT_EQUIP } });
 });
 
 app.post("/api/buy", (req, res) => {
