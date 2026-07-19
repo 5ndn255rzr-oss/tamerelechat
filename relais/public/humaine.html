@@ -196,11 +196,14 @@ async function post(path, body) {
   return j;
 }
 
+// Token push injecté par l'app native (WebView) -> notifs qui réveillent l'iPhone.
+const PUSH_TOKEN = (typeof window !== "undefined" && window.__RELAIS_PUSH_TOKEN) || null;
+
 $("createBtn").onclick = async () => {
   const name = $("name").value.trim() || "Hôte";
   say(" "); // débloque la voix (geste utilisateur)
   try {
-    const r = await post("/api/room/create", { name });
+    const r = await post("/api/room/create", { name, token: PUSH_TOKEN });
     playerId = r.playerId; code = r.code; isHost = true;
     enterLobby(r.room);
   } catch (e) { $("homeErr").textContent = "❌ " + e.message; }
@@ -211,7 +214,7 @@ $("joinBtn").onclick = async () => {
   if (c.length < 4) { $("homeErr").textContent = "Tape le code à 4 lettres."; return; }
   say(" ");
   try {
-    const r = await post("/api/room/join", { code: c, name });
+    const r = await post("/api/room/join", { code: c, name, token: PUSH_TOKEN });
     playerId = r.playerId; code = r.code; isHost = false;
     enterLobby(r.room);
   } catch (e) { $("homeErr").textContent = "❌ " + e.message; }
