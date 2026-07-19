@@ -149,10 +149,8 @@ let playerId = null, code = null, isHost = false;
 let seenLoss = null, wasMine = false, lastHolder = null;
 const $ = (id) => document.getElementById(id);
 
-function say(txt) {
-  try { const u = new SpeechSynthesisUtterance(txt); u.lang = "fr-FR"; u.rate = 1.05; u.pitch = .9;
-    speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
-}
+// Voix désactivée (plus de cues robotiques). Seul le son de bris (playBreak) reste.
+function say() {}
 // Son de BRIS (la chaîne casse) — synthèse Web Audio, aucun fichier requis.
 let _actx;
 function playBreak() {
