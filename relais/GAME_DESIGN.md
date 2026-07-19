@@ -43,22 +43,26 @@ renverser une métropole molle.
 Chaque passe remonte dans une hiérarchie géographique emboîtée :
 
 ```
-Toi ▸ Ville ▸ Département ▸ Région ▸ Pays ▸ 🌍 Univers
+Toi ▸ Ville ▸ Région ▸ Pays ▸ Continent ▸ 🌍 Monde
 ```
 
 - Chaque étage a **son classement en direct**.
-- Un seul geste (la passe) marque des points aux **6 étages** à la fois.
-- **MVP actuel** : 2 étages (Ville + Pays). Les 4 autres se branchent sur le même mécanisme d'agrégation.
+- Un seul geste (la passe) marque des points à tous les étages à la fois.
+- **Implémenté** : Ville, Pays et Continent en classement live (`/api/state`), plus
+  le **zoom national par région** (`/api/country?name=`). Le tout sur une **vraie
+  carte du monde** (projection équirectangulaire).
 
 ### Anti-frustration compétitive
 - **Saisons courtes** (ex. 1 semaine) : reset des classements → une ville battue n'est jamais éliminée, tout le monde repart avec de l'espoir.
 - **Ligues avec montée/descente** (à venir) : tu affrontes des villes de taille comparable → matchs toujours serrés.
 - **Le rang perso ne redescend pas** avec la saison → tu progresses toujours quelque part.
 
-## 5. Le hook social (réutilise le moteur push de « ta mère le chat »)
+## 5. Le hook social (notifications push)
 - *« 🚨 Courbevoie vient de passer devant Nanterre. Reprends le lead. »*
 - *« Il reste 2h. Ta ville est 2e du 92. »*
 - Rivalités ville-contre-ville → les gens **recrutent leurs potes IRL** = croissance virale gratuite.
+- Mode **Chaîne Humaine** : quand l'étincelle t'arrive, notif push qui réveille
+  l'iPhone verrouillé ; si tu la lâches, **son de bris** (la chaîne casse).
 
 ## 6. Pourquoi ça n'existe pas
 - Les roguelites « no-wait » sont **solo** et se **reset** à chaque mort.
@@ -67,18 +71,23 @@ Toi ▸ Ville ▸ Département ▸ Région ▸ Pays ▸ 🌍 Univers
 - Personne n'a fusionné **relais temps réel massif + progression persistante + zéro énergie + guerre de territoire géographique réelle**.
 
 ## 7. État du prototype (ce dossier)
-Proto **web jouable** validant la boucle complète : défi d'adresse, passe/casse,
-rangs + multiplicateurs, chaîne mondiale live, classements Ville & Pays, monde
-vivant (bots d'autres villes). Voir `README.md` pour lancer.
+Jeu **web jouable** complet : défi d'adresse, passe/casse, rangs + multiplicateurs,
+chaîne mondiale live, classements Ville/Pays/Continent, carte du monde, ligues,
+saisons, boutique, monde vivant (bots). Voir `README.md` pour lancer.
+
+**App native (iOS/Android)** : coquille **WebView** (`app/App.js`) qui charge ce jeu
+web + enregistre le token push natif (injecté via `window.__RELAIS_PUSH_TOKEN`) pour
+la Chaîne Humaine. Toute la logique de jeu reste en un seul endroit (le web).
 
 ### Déjà en place
 - [x] Boucle chaîne mondiale (défi d'adresse, rangs, difficulté, territoires ville/pays)
 - [x] **Combos** + **Mode Fièvre** collectif + **Couronne** du Porteur d'Étincelle (démo web)
 - [x] **Saisons** : reset auto des territoires, panthéon des gagnants, rangs perso conservés (`/api/season`, `SEASON_SEC`)
-- [x] **Carte de conquête** de l'Hexagone : villes géolocalisées, la #1 s'allume (`/api/map`)
-- [x] **Chaîne Humaine** : hot-potato multijoueur en salon (web + écran natif) — `/api/room/*`
+- [x] **Carte de conquête** : villes géolocalisées, la #1 s'allume (`/api/map`) — d'abord
+      l'Hexagone, puis remplacée par la **carte du monde** (cf. plus bas)
+- [x] **Chaîne Humaine** : hot-potato multijoueur en salon (web + app native) — `/api/room/*`
 - [x] **Notifs push natives** : l'étincelle réveille l'iPhone verrouillé du destinataire ;
-      le maillon cramé reçoit la notif sonore « ta mère le chat » (rebranche le moteur push d'origine)
+      quand la chaîne casse, **son de bris** (le prank « ta mère le chat » a été retiré)
 
 - [x] **Carte du monde** : projection équirectangulaire, villes en lat/lng, compétition mondiale
 - [x] **Étage Continents** (Ville ▸ Pays ▸ Continent ▸ Monde) — `/api/state.continents`
@@ -108,9 +117,10 @@ vivant (bots d'autres villes). Voir `README.md` pour lancer.
 - [x] **Pub récompensée** : « revive » du carton rouge. `/api/ad/reward` (émet un
       jeton ; en prod = callback SSV AdMob) + `/api/revive` (consomme le jeton, lève
       la suspension une fois). L'escalade des bans persiste (anti-abus).
-- [x] **Boutique cosmétique** : skins d'étincelle + packs de vannes (`/api/shop`,
-      `/api/buy`, `/api/equip`). Ownership sur le compte, persistée. Achat réel via
-      l'IAP du store (stub en proto). Cosmétique + son uniquement.
+- [x] **Boutique cosmétique** : skins d'étincelle + **sons de bris** (Verre, Chaîne,
+      Tonnerre, Cristal) joués quand la chaîne casse (`/api/shop`, `/api/buy`,
+      `/api/equip`). Ownership sur le compte, persistée. Achat réel via l'IAP du
+      store (stub en proto). Apparence + son uniquement, aucun avantage.
 - [x] **Viralité** : boutons « Défie tes potes » (web/démo) et « Invite tes potes »
       (Chaîne Humaine) via Web Share API.
 - [x] **Mesure de rétention** : `firstDay`/`days`/`lastSeen` par compte + `/api/metrics`
