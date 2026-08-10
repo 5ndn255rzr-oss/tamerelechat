@@ -65,7 +65,7 @@ module.exports = {
     web: {
       favicon: "./assets/favicon.png",
     },
-    plugins: ["expo-status-bar"],
+    plugins: ["expo-status-bar", "react-native-google-mobile-ads"],
     extra: {
       relaisUrl: RELAIS_URL,
       rewardedUnitIdIos: REWARDED_UNIT_IOS,
