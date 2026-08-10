@@ -48,6 +48,25 @@
     padding:12px; font-size:14px; font-weight:700; width:100%; cursor:pointer; }
   .ghostbtn:active { transform: scale(.98); }
 
+  /* --- Boutique --- */
+  .sheet { width:92%; max-width:400px; max-height:80vh; overflow-y:auto; background:#0c0a16;
+    border:1px solid var(--line); border-radius:22px; padding:20px; }
+  .sheet h2 { font-size:20px; margin-bottom:2px; }
+  .sheet .sub { font-size:12px; color:#9a92c0; margin-bottom:14px; }
+  .shoph { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#9a92c0; margin:16px 0 8px; }
+  .shopitem { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:10px 12px; margin-bottom:8px; }
+  .shopitem .si-l { display:flex; align-items:center; gap:10px; flex:1; font-size:14px; font-weight:600; }
+  .sw { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    box-shadow:0 0 10px rgba(255,255,255,.25); flex:none; }
+  .shopbtn { border:0; border-radius:10px; padding:9px 12px; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; }
+  .shopbtn.ad { background:linear-gradient(135deg,#ffd54a,var(--gold)); color:#12101a; }
+  .shopbtn.own { background:var(--accent); color:#fff; }
+  .shopbtn.eq { background:#2b2743; color:#6ee7a0; border:1px solid #27ae60; cursor:default; }
+  .shopbtn:active:not(:disabled) { transform:translateY(1px); }
+  .closebtn { width:100%; margin-top:16px; padding:13px; border:1px solid var(--line); border-radius:14px;
+    background:#221c3d; color:#c9c2e8; font-size:15px; font-weight:800; cursor:pointer; }
+
   /* --- HUD --- */
   #game { display:none; }
   .chainbox { text-align:center; margin: 6px 0 14px; }
@@ -187,7 +206,8 @@
     </div>
 
     <div class="actionrow">
-      <button id="shareBtn" class="actbtn" style="flex:1">🔥 Défie tes potes</button>
+      <button id="shopBtn" class="actbtn">🛍️ Boutique</button>
+      <button id="shareBtn" class="actbtn">🔥 Défie tes potes</button>
     </div>
     <div class="online" id="online"></div>
     <div style="text-align:center;margin-top:12px">
@@ -196,9 +216,19 @@
   </div>
 </div>
 
-<!-- Fausse pub (remplacée par le SDK récompensé AdMob en prod) -->
+<!-- Fausse pub (utilisée uniquement en navigateur ; dans l'app = vraie pub AdMob) -->
 <div class="modal" id="adModal">
   <div class="adbox"><div class="adlabel">PUBLICITÉ</div><div class="adcount" id="adCount">5</div><div class="adsub">récompense dans quelques secondes…</div></div>
+</div>
+
+<!-- Boutique : tout se débloque en regardant une pub (rien de payant) -->
+<div class="modal" id="shopModal">
+  <div class="sheet">
+    <h2>🛍️ Boutique</h2>
+    <div class="sub">Tout est gratuit : regarde une courte pub pour débloquer. Apparence et son uniquement — aucun avantage en jeu.</div>
+    <div id="shopBody"></div>
+    <button class="closebtn" id="shopClose">Fermer</button>
+  </div>
 </div>
 
 <script>
@@ -422,22 +452,115 @@ setInterval(() => {
   else { el.style.display = "none"; if (rb) rb.style.display = "none"; }
 }, 250);
 
-// --- Pub récompensée : revive du carton (en prod : SDK AdMob rewarded) ---
-function fakeAd() {
+// ============================================================================
+//  PONT PUB RÉCOMPENSÉE
+//  Dans l'app native : on demande une VRAIE pub AdMob au code natif (via
+//  postMessage) et on attend son résultat. En navigateur : pub simulée (le web
+//  reste jouable/démontrable). Aucune fonctionnalité payante : tout se débloque
+//  en regardant une pub.
+// ============================================================================
+const inApp = !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
+let _adResolve = null;
+// Le code natif appelle ceci via injectJavaScript quand la pub est finie.
+window.__onAdResult = (ok) => { if (_adResolve) _adResolve(!!ok); };
+
+function fakeAd() { // pub simulée (navigateur uniquement)
   return new Promise((resolve) => {
     const m = $("adModal"), c = $("adCount"); let n = 5; m.classList.add("on"); c.textContent = n;
     const t = setInterval(() => { n--; c.textContent = n; if (n <= 0) { clearInterval(t); m.classList.remove("on"); resolve(); } }, 700);
   });
 }
+// Affiche une pub récompensée -> résout true si la récompense est gagnée.
+function showRewardedAd(reason) {
+  return new Promise((resolve) => {
+    if (!inApp) { fakeAd().then(() => resolve(true)); return; }
+    let done = false;
+    const finish = (ok) => { if (done) return; done = true; _adResolve = null; clearTimeout(to); resolve(ok); };
+    const to = setTimeout(() => finish(false), 60000); // sécurité anti-blocage
+    _adResolve = finish;
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "SHOW_REWARDED", reason }));
+  });
+}
+// Pub vue -> jeton de récompense serveur (à durcir en SSV AdMob côté serveur).
+async function watchAdForReward(reason) {
+  const ok = await showRewardedAd(reason);
+  if (!ok) return null;
+  try { return (await post("/api/ad/reward", { playerId })).rewardToken; }
+  catch (e) { return null; }
+}
+
+// --- Revive du carton rouge (regarde une pub) ---
 $("reviveBtn").onclick = async () => {
-  await fakeAd();
+  const btn = $("reviveBtn"); btn.disabled = true;
+  const token = await watchAdForReward("revive");
+  btn.disabled = false;
+  if (!token) return;
   try {
-    const rw = await post("/api/ad/reward", { playerId });        // en prod : callback SSV serveur
-    const r = await post("/api/revive", { playerId, rewardToken: rw.rewardToken });
+    const r = await post("/api/revive", { playerId, rewardToken: token });
     bannedUntil = 0; applyMe(r.me); floatText("REPRISE ✨", "#2ecc71");
-    $("banNote").style.display = "none"; $("reviveBtn").style.display = "none";
+    $("banNote").style.display = "none"; btn.style.display = "none";
   } catch (e) {}
 };
+
+// ============================================================================
+//  BOUTIQUE (cosmétique) — déblocage 100% par pub, aucun paiement
+// ============================================================================
+let shopData = null;
+$("shopBtn").onclick = openShop;
+$("shopClose").onclick = () => $("shopModal").classList.remove("on");
+
+async function openShop() {
+  $("shopModal").classList.add("on");
+  $("shopBody").innerHTML = '<div class="sub">chargement…</div>';
+  try { shopData = await fetch(API + "/api/shop?playerId=" + playerId).then((x) => x.json()); }
+  catch (e) { shopData = { shop: { sparks: [], breaks: [] }, owned: [], equipped: {} }; }
+  renderShop();
+}
+function renderShop() {
+  if (!shopData) return;
+  const owned = new Set(shopData.owned || []);
+  const eq = me?.equipped || shopData.equipped || {};
+  const section = (title, type, items, slot) => {
+    const rows = (items || []).map((it) => {
+      const isOwned = it.price === 0 || owned.has(it.id);
+      const isEq = eq[slot] === it.id;
+      const swatch = it.color
+        ? `<span class="sw" style="background:${it.color}"></span>`
+        : `<span class="sw" style="background:none;box-shadow:none;font-size:18px">${it.emoji || ""}</span>`;
+      let btn;
+      if (isEq) btn = `<button class="shopbtn eq" disabled>Équipé ✓</button>`;
+      else if (isOwned) btn = `<button class="shopbtn own" data-eq="${type}:${it.id}">Équiper</button>`;
+      else btn = `<button class="shopbtn ad" data-ad="${type}:${it.id}">📺 Débloquer</button>`;
+      return `<div class="shopitem"><div class="si-l">${swatch}<span>${it.name}</span></div>${btn}</div>`;
+    }).join("");
+    return `<div class="shoph">${title}</div>${rows}`;
+  };
+  $("shopBody").innerHTML =
+    section("✨ Étincelles", "sparks", shopData.shop.sparks, "spark") +
+    section("🔊 Sons de bris", "breaks", shopData.shop.breaks, "break");
+  $("shopBody").querySelectorAll("[data-eq]").forEach((b) => {
+    b.onclick = () => equipItem(...b.dataset.eq.split(":"));
+  });
+  $("shopBody").querySelectorAll("[data-ad]").forEach((b) => {
+    b.onclick = () => unlockItem(b, ...b.dataset.ad.split(":"));
+  });
+}
+async function equipItem(type, id) {
+  try { const r = await post("/api/equip", { playerId, type, itemId: id }); applyMe(r.me); renderShop(); }
+  catch (e) {}
+}
+async function unlockItem(btn, type, id) {
+  btn.disabled = true; btn.textContent = "…";
+  const token = await watchAdForReward("unlock");
+  if (!token) { btn.disabled = false; btn.textContent = "📺 Débloquer"; return; }
+  try {
+    const r = await post("/api/unlock", { playerId, type, itemId: id, rewardToken: token });
+    applyMe(r.me);
+    shopData.owned = r.me.owned; shopData.equipped = r.me.equipped;
+    if (type === "breaks") playBreak(id); // petit aperçu du son débloqué
+    renderShop();
+  } catch (e) { btn.disabled = false; btn.textContent = "📺 Débloquer"; }
+}
 
 // --- Partage (viralité) ---
 $("shareBtn").onclick = async () => {

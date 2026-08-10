@@ -464,6 +464,28 @@ app.post("/api/equip", (req, res) => {
   res.json({ ok: true, me: publicPlayer(p) });
 });
 
+// --- DÉBLOCAGE PAR PUB RÉCOMPENSÉE (aucun paiement) --------------------------
+// Le joueur regarde une pub -> /api/ad/reward émet un jeton -> /api/unlock le
+// consomme pour débloquer (et équiper) le cosmétique choisi. C'est le cœur du
+// modèle « gratuit + pub » : chaque déblocage = une pub vue = un revenu.
+// (Durcissement prévu : passer /api/ad/reward en Server-Side Verification AdMob.)
+app.post("/api/unlock", (req, res) => {
+  const p = players.get(req.body?.playerId);
+  if (!p) return res.status(404).json({ error: "joueur inconnu" });
+  const { type, itemId, rewardToken } = req.body || {};
+  const item = shopItem(type, itemId);
+  if (!item) return res.status(400).json({ error: "article introuvable" });
+  if (!rewardToken || rewardToken !== p.rewardToken || Date.now() > p.rewardExp) {
+    return res.status(403).json({ error: "récompense invalide (regarde la pub)" });
+  }
+  p.rewardToken = null; // jeton consommé (une pub = un déblocage)
+  const a = p.account;
+  if (!a.owned.includes(itemId)) a.owned.push(itemId);
+  a.equipped[SLOT[type]] = itemId; // on équipe direct après déblocage
+  console.log(`[unlock] ${a.name} a débloqué ${type}:${itemId} via pub`);
+  res.json({ ok: true, me: publicPlayer(p) });
+});
+
 // --- Passe réussie : banque points + XP, allonge la chaîne, nourrit le territoire
 app.post("/api/pass", (req, res) => {
   const p = players.get(req.body?.playerId);
