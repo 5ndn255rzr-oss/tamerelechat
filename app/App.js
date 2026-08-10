@@ -94,6 +94,9 @@ export default function App() {
         style={styles.web}
         originWhitelist={["*"]}
         onMessage={onMessage}
+        // Signale au jeu web que ce build sait afficher de VRAIES pubs AdMob.
+        // Les anciens builds ne l'injectent pas -> le web reste sur la pub simulée.
+        injectedJavaScriptBeforeContentLoaded={"window.__RELAIS_NATIVE_ADS = true; true;"}
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         startInLoadingState

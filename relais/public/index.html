@@ -459,7 +459,11 @@ setInterval(() => {
 //  reste jouable/démontrable). Aucune fonctionnalité payante : tout se débloque
 //  en regardant une pub.
 // ============================================================================
-const inApp = !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
+// « app avec pubs natives » = vrai UNIQUEMENT si l'app native a injecté ce flag
+// (build 9+ avec le pont AdMob). Anciens builds / navigateur -> pub simulée,
+// pour ne jamais laisser un joueur bloqué sur un bouton qui ne répond pas.
+const inApp = !!window.__RELAIS_NATIVE_ADS
+  && !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
 let _adResolve = null;
 // Le code natif appelle ceci via injectJavaScript quand la pub est finie.
 window.__onAdResult = (ok) => { if (_adResolve) _adResolve(!!ok); };
