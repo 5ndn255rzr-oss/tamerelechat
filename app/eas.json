@@ -16,7 +16,11 @@
     },
     "production": {
       "autoIncrement": true,
-      "env": { "RELAIS_URL": "https://relais-server.onrender.com" }
+      "env": {
+        "RELAIS_URL": "https://relais-server.onrender.com",
+        "ADMOB_IOS_APP_ID": "ca-app-pub-2025971905620476~9839471736",
+        "ADMOB_REWARDED_IOS": "ca-app-pub-2025971905620476/2890920003"
+      }
     }
   },
   "submit": {
