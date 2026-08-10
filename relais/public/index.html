@@ -66,7 +66,8 @@
 
   /* --- Skill bar --- */
   #arena { position:relative; height:200px; border-radius:20px; background:var(--card);
-    border:1px solid var(--line); margin-bottom:8px; overflow:hidden; cursor:pointer; }
+    border:1px solid var(--line); margin-bottom:8px; overflow:hidden; cursor:pointer;
+    touch-action: manipulation; } /* supprime l'attente double-tap-zoom (latence tactile) */
   #arena.hit { animation: pop .18s; }
   #arena.miss { animation: shake .3s; }
   @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.015)} 100%{transform:scale(1)} }
@@ -205,6 +206,7 @@ const API = ""; // même origine
 let playerId = null;
 let me = null;
 let diff = { sweep: 1, zone: 0.30 };
+const BASE_POINTS = 10; // doit refléter server.js — juste pour l'affichage optimiste
 
 // Sons de BRIS (la chaîne casse) — synthèse Web Audio, 4 variantes (cosmétique).
 let _actx;
@@ -368,34 +370,46 @@ async function raw(path) {
   const res = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) });
   return { status: res.status, body: await res.json().catch(() => ({})) };
 }
-async function attempt() {
+// Entrée OPTIMISTE : on réagit à l'écran INSTANTANÉMENT (le hit-test est local),
+// puis on confirme auprès du serveur en arrière-plan. Aucune latence réseau dans
+// la boucle de jeu — le serveur reste juge (il recale la chaîne/les points).
+function attempt() {
   if (!playerId || locked) return;
   if (Date.now() < bannedUntil) { flash("miss"); return; } // suspendu : tap ignoré
   const inZone = needlePos >= zoneStart && needlePos <= zoneStart + diff.zone;
   locked = true;
-  try {
-    if (inZone) {
-      const { status, body } = await raw("/api/pass");
-      if (status === 429) { /* trop rapide, ignoré */ }
-      else if (status === 403) { applyBan(body); }
-      else { flash("hit"); floatText("+" + body.gained, "#2ecc71"); $("chainVal").textContent = body.chain; applyMe(body.me); }
-      newZone();
-    } else {
-      const { body } = await raw("/api/break");
-      flash("miss");
+  setTimeout(() => (locked = false), 90); // anti double-tap, indépendant du réseau
+
+  if (inZone) {
+    // --- feedback immédiat ---
+    flash("hit");
+    floatText("+" + BASE_POINTS * (me?.mult || 1), "#2ecc71");
+    $("chainVal").textContent = (parseInt($("chainVal").textContent, 10) || 0) + 1;
+    newZone();
+    // --- confirmation serveur (recale les valeurs autoritaires) ---
+    raw("/api/pass").then(({ status, body }) => {
+      if (status === 403) { applyBan(body); return; }   // suspendu
+      if (status === 429) return;                        // trop rapide : SSE recalera la chaîne
+      if (body && body.chain != null) $("chainVal").textContent = body.chain;
+      if (body && body.me) applyMe(body.me);
+    }).catch(() => {});
+  } else {
+    // --- raté : bris immédiat ---
+    flash("miss");
+    playBreak(); // 🔊 la chaîne se brise
+    floatText("CASSÉ !", "#e74c3c");
+    $("chainVal").textContent = "0";
+    newZone();
+    raw("/api/break").then(({ body }) => {
+      if (!body) return;
       if (body.ignored) { floatText("SUSPENDU", "#ff4d6d"); }
-      else {
-        playBreak(); // 🔊 la chaîne se brise
-        floatText(body.penalty ? `CASSÉ −${body.penalty}` : "CASSÉ !", "#e74c3c");
-        $("chainVal").textContent = "0";
-        $("chainSub").textContent = body.brokeAt > 0 ? `tu as cassé une chaîne de ${body.brokeAt} 💀 (−${body.penalty} pts)` : "raté";
+      else if (body.brokeAt > 0) {
+        $("chainSub").textContent = `tu as cassé une chaîne de ${body.brokeAt} 💀 (−${body.penalty} pts)`;
       }
       if (body.banSec) applyBan(body);
-      applyMe(body.me);
-      newZone();
-    }
-  } catch (e) { /* ignore réseau */ }
-  setTimeout(() => (locked = false), 120);
+      if (body.me) applyMe(body.me);
+    }).catch(() => {});
+  }
 }
 function applyBan(body) {
   const secs = body.bannedFor || body.banSec || 0;
