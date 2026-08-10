@@ -37,9 +37,8 @@ d'autres villes jouent en continu pour montrer que le monde tourne même sans to
 | GET  | `/api/leagues?city=` | divisions + montée/descente |
 | GET  | `/api/season` | saison en cours + panthéon |
 | GET  | `/api/tiers` | table des rangs / difficulté |
-
-Chaîne Humaine (hot-potato) : `POST /api/room/{create,join,start,pass}` +
-`GET /api/room/state`.
+| POST | `/api/pass` · `/api/break` | passe réussie / ratée |
+| POST | `/api/buy` · `/api/equip` · GET `/api/shop` | boutique cosmétique |
 
 ## Persistance (optionnelle)
 

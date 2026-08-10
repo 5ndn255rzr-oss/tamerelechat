@@ -61,8 +61,7 @@ Toi ▸ Ville ▸ Région ▸ Pays ▸ Continent ▸ 🌍 Monde
 - *« 🚨 Courbevoie vient de passer devant Nanterre. Reprends le lead. »*
 - *« Il reste 2h. Ta ville est 2e du 92. »*
 - Rivalités ville-contre-ville → les gens **recrutent leurs potes IRL** = croissance virale gratuite.
-- Mode **Chaîne Humaine** : quand l'étincelle t'arrive, notif push qui réveille
-  l'iPhone verrouillé ; si tu la lâches, **son de bris** (la chaîne casse).
+- Bouton **« Défie tes potes »** (partage natif) pour ramener des joueurs.
 
 ## 6. Pourquoi ça n'existe pas
 - Les roguelites « no-wait » sont **solo** et se **reset** à chaque mort.
@@ -76,8 +75,10 @@ chaîne mondiale live, classements Ville/Pays/Continent, carte du monde, ligues,
 saisons, boutique, monde vivant (bots). Voir `README.md` pour lancer.
 
 **App native (iOS/Android)** : coquille **WebView** (`app/App.js`) qui charge ce jeu
-web + enregistre le token push natif (injecté via `window.__RELAIS_PUSH_TOKEN`) pour
-la Chaîne Humaine. Toute la logique de jeu reste en un seul endroit (le web).
+web. Toute la logique de jeu reste en un seul endroit (le web).
+
+> Le mode « Chaîne Humaine » (hot-potato entre potes) a été **retiré** : le jeu
+> est recentré sur la **chaîne mondiale**, son cœur.
 
 ### Déjà en place
 - [x] Boucle chaîne mondiale (défi d'adresse, rangs, difficulté, territoires ville/pays)
@@ -85,9 +86,8 @@ la Chaîne Humaine. Toute la logique de jeu reste en un seul endroit (le web).
 - [x] **Saisons** : reset auto des territoires, panthéon des gagnants, rangs perso conservés (`/api/season`, `SEASON_SEC`)
 - [x] **Carte de conquête** : villes géolocalisées, la #1 s'allume (`/api/map`) — d'abord
       l'Hexagone, puis remplacée par la **carte du monde** (cf. plus bas)
-- [x] **Chaîne Humaine** : hot-potato multijoueur en salon (web + app native) — `/api/room/*`
-- [x] **Notifs push natives** : l'étincelle réveille l'iPhone verrouillé du destinataire ;
-      quand la chaîne casse, **son de bris** (le prank « ta mère le chat » a été retiré)
+- [x] **Son de bris** quand la chaîne casse (le prank « ta mère le chat » a été retiré)
+- [~] ~~Chaîne Humaine (hot-potato)~~ — **retirée** : jeu recentré sur la chaîne mondiale
 
 - [x] **Carte du monde** : projection équirectangulaire, villes en lat/lng, compétition mondiale
 - [x] **Étage Continents** (Ville ▸ Pays ▸ Continent ▸ Monde) — `/api/state.continents`
@@ -100,8 +100,8 @@ la Chaîne Humaine. Toute la logique de jeu reste en un seul endroit (le web).
 
 - [x] **GPS réel** à l'inscription : bouton « ma position » → place le joueur sur la
       ville la plus proche (repli menu si refusé)
-- [x] **Temps réel (SSE)** : `/api/stream` (monde) et `/api/room/stream` (hot-potato)
-      remplacent le polling — push serveur→client instantané, repli polling auto
+- [x] **Temps réel (SSE)** : `/api/stream` remplace le polling — push serveur→client
+      instantané (la chaîne des autres bouge en direct), repli polling auto
 - [x] **Zoom national (régions)** : `/api/country?name=` regroupe les villes d'un pays
       par région ; panneau « 🔎 régions » côté client
 
@@ -121,8 +121,7 @@ la Chaîne Humaine. Toute la logique de jeu reste en un seul endroit (le web).
       Tonnerre, Cristal) joués quand la chaîne casse (`/api/shop`, `/api/buy`,
       `/api/equip`). Ownership sur le compte, persistée. Achat réel via l'IAP du
       store (stub en proto). Apparence + son uniquement, aucun avantage.
-- [x] **Viralité** : boutons « Défie tes potes » (web/démo) et « Invite tes potes »
-      (Chaîne Humaine) via Web Share API.
+- [x] **Viralité** : bouton « Défie tes potes » (partage natif / Web Share API).
 - [x] **Mesure de rétention** : `firstDay`/`days`/`lastSeen` par compte + `/api/metrics`
       (comptes, actifs 24 h, J1/J7 cohortes).
 - [x] **Politique de confidentialité** (`/privacy.html`, modèle à compléter — requis pour les pubs).

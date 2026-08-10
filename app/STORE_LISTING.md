@@ -33,11 +33,9 @@ Maintiens l'étincelle : tape au bon moment, enchaîne les passes, et regarde la
 
 🔥 **Combos & Fièvre** — Enchaîne sans rater pour faire chauffer ton multiplicateur et déclencher le mode Fièvre collectif.
 
-😼 **Chaîne Humaine (entre potes)** — Un mode « patate chaude » où l'étincelle passe littéralement de téléphone en téléphone. Le dernier qui la lâche… se fait chambrer par son propre tél.
-
 ✨ **Sans énergie, sans attente** — Pas de jauge à recharger, pas de « reviens dans 4h ». Le jeu ne te fait jamais patienter.
 
-Zéro pay-to-win : les achats ne changent que ton style (skins d'étincelle) et tes sons. La compétition reste 100 % équitable.
+Rien de payant : tout est gratuit. La compétition reste 100 % équitable.
 
 **Tu tiens combien de temps la chaîne ?**
 
@@ -51,7 +49,7 @@ Zéro pay-to-win : les achats ne changent que ton style (skins d'étincelle) et 
 - **Secondaire** : Jeux → Multijoueur
 
 ## Notes de version (v1.0.0)
-`Première version de RELAIS ✨ : chaîne mondiale, carte de conquête, ligues, saisons et le mode Chaîne Humaine entre potes. Bon jeu !`
+`Première version de RELAIS ✨ : chaîne mondiale, carte de conquête, ligues et saisons. Ne lâche pas la chaîne !`
 
 ---
 
@@ -59,4 +57,4 @@ Zéro pay-to-win : les achats ne changent que ton style (skins d'étincelle) et 
 - **URL politique de confidentialité** : héberge `relais/public/privacy.html` (complété) et colle le lien.
 - **Captures** : 3–5 par plateforme (iPhone 6.7" + 5.5" pour l'App Store ; téléphone + éventuellement 7"/10" pour Play).
 - **Sécurité des données (Play)** / **Nutrition labels (App Store)** : déclare pseudo, données de jeu, notifications, et pubs si activées.
-- **Classification d'âge** : renseigne le questionnaire (le mode Chaîne Humaine contient de l'humour/chambrage léger).
+- **Classification d'âge** : renseigne le questionnaire → « Accès web illimité » = **Non** (l'app n'affiche que le jeu). Tu obtiendras 4+.
