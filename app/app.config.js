@@ -80,6 +80,8 @@ module.exports = {
       relaisUrl: RELAIS_URL,
       rewardedUnitIdIos: REWARDED_UNIT_IOS,
       rewardedUnitIdAndroid: REWARDED_UNIT_ANDROID,
+      // Force les pubs de TEST (toujours remplies) tant que ADMOB_TEST_ADS=1.
+      useTestAds: process.env.ADMOB_TEST_ADS === "1",
       eas: {
         projectId: "d0a5047c-d94c-428e-83f8-5a3a06c44e1f",
       },

@@ -25,9 +25,14 @@ const RELAIS_URL = extra.relaisUrl || "https://relais-server.onrender.com";
 
 // Unité pub récompensée : réelle si fournie (via app.config.js/eas.json),
 // sinon on retombe sur l'unité de TEST officielle Google.
+// Si extra.useTestAds est vrai (env ADMOB_TEST_ADS=1), on FORCE les pubs de
+// test (toujours remplies) — pratique pour valider le flux avant qu'AdMob
+// n'approuve/serve tes vraies pubs. À repasser à 0 pour gagner de l'argent.
+const useTestAds = String(extra.useTestAds) === "true";
 const configuredUnit =
   Platform.OS === "ios" ? extra.rewardedUnitIdIos : extra.rewardedUnitIdAndroid;
-const REWARDED_UNIT = configuredUnit && configuredUnit.length > 0 ? configuredUnit : TestIds.REWARDED;
+const REWARDED_UNIT =
+  !useTestAds && configuredUnit && configuredUnit.length > 0 ? configuredUnit : TestIds.REWARDED;
 
 export default function App() {
   const webRef = useRef(null);
