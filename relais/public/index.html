@@ -321,11 +321,13 @@ function playHit(combo) {
   } catch (e) {}
 }
 
-// --- Musique d'ambiance (synthétisée, sans fichier ni copyright) --------------
-// Nappe lente qui enchaîne 4 accords en boucle, volume bas pour ne pas gêner
-// les repères sonores du jeu. Bouton 🔊/🔇 (choix mémorisé).
+// --- Musique dynamique (synthétisée, sans fichier ni copyright) ---------------
+// Prod entraînante (progression Am-F-C-G + mélodie) qui GAGNE DES COUCHES et
+// ACCÉLÈRE à chaque palier : plus ton rang monte, plus ça envoie.
+// musicLevel = index du rang (0 Bronze … 4 Légende), lu en direct par le séquenceur.
 let _music = null;
 let musicOn = true;
+let musicLevel = 0;
 try { musicOn = localStorage.getItem("relais_music") !== "off"; } catch (e) {}
 
 function startMusic() {
@@ -369,32 +371,68 @@ function startMusic() {
       g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.004, t + dur);
       o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + dur + 0.02);
     };
-    const lead = (t, freq) => {
+    const lead = (t, freq, v) => {
       const o = a.createOscillator(), g = a.createGain();
       o.type = "square"; o.frequency.value = freq;
-      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.1, t + 0.008);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-      o.connect(g).connect(out); o.start(t); o.stop(t + 0.17);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v || 0.09, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.16);
     };
+    const clap = (t) => {
+      for (let i = 0; i < 3; i++) {
+        const s = noise(t + i * 0.008, 0.05), f = a.createBiquadFilter(), g = a.createGain();
+        f.type = "bandpass"; f.frequency.value = 2000;
+        g.gain.setValueAtTime(0.16, t + i * 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.008 + 0.05);
+        s.connect(f).connect(g).connect(out);
+      }
+    };
+    const stab = (t, freqs) => freqs.forEach((fr) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth"; o.frequency.value = fr;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.24);
+    });
 
-    const BPM = 128, sixteenth = 15 / BPM; // 60/BPM/4 (double-croche)
-    const K = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]; // grosse caisse à chaque temps
-    const H = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,1]; // charley sur les contretemps
-    const S = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0]; // caisse claire sur 2 & 4
-    const barRoots = [55.00, 43.65, 65.41, 49.00];   // basses : Am F C G (une par mesure)
-    const arp = [220.00, 261.63, 329.63, 392.00, 440.00, 392.00, 329.63, 261.63];
-    let step = 0, arpI = 0, next = a.currentTime + 0.12;
+    // Progression Am-F-C-G (accrocheuse, uplifting) : basse, notes d'arpège, accord.
+    const barBass = [55.00, 43.65, 65.41, 49.00];
+    const barArp = [
+      [220.00, 261.63, 329.63, 440.00],  // Am
+      [174.61, 220.00, 261.63, 349.23],  // F
+      [261.63, 329.63, 392.00, 523.25],  // C
+      [196.00, 246.94, 293.66, 392.00],  // G
+    ];
+    const barChord = [
+      [220, 261.63, 329.63], [174.61, 220, 261.63], [261.63, 329.63, 392], [196, 246.94, 293.66],
+    ];
+    let step = 0, next = a.currentTime + 0.12;
 
+    // Séquenceur à anticipation : lit musicLevel EN DIRECT -> plus le rang monte,
+    // plus la prod accélère et empile les couches (sans coupure).
     const tick = () => {
       if (!_music) return;
-      while (next < a.currentTime + 0.13) { // scheduler à anticipation
-        const s = step % 16, root = barRoots[(step / 16 | 0) % barRoots.length];
-        if (K[s]) kick(next);
-        if (H[s]) hat(next, s % 4 === 2);
-        if (S[s]) snare(next);
-        if (s % 4 === 0) bass(next, root, sixteenth * 3.5);          // basse à chaque temps
-        if (s % 2 === 0) { lead(next, arp[arpI % arp.length]); arpI++; } // arpège en croches
-        next += sixteenth; step++;
+      const lvl = Math.min(4, musicLevel | 0);
+      const six = 15 / (120 + lvl * 7); // 120 → 148 BPM selon le rang
+      while (next < a.currentTime + 0.13) {
+        const s = step % 16, bar = (step / 16 | 0) % 4;
+        const root = barBass[bar], arpN = barArp[bar];
+        if (s % 4 === 0) kick(next);                              // 4/4
+        if (lvl >= 2 && (s === 10 || s === 14)) kick(next);      // kicks syncopés
+        if (s % 2 === 1) hat(next, false);                       // charley contretemps
+        if (lvl >= 1 && s % 4 === 2) hat(next, true);            // charley ouvert
+        if (lvl >= 3 && s % 2 === 0) hat(next, false);           // charley 16e (dense)
+        if (lvl >= 1 && (s === 4 || s === 12)) snare(next);      // backbeat 2&4
+        if (lvl >= 3 && (s === 4 || s === 12)) clap(next);       // clap qui double
+        if (s % 4 === 0) bass(next, root, six * 3.5);            // basse au temps
+        if (lvl >= 2 && s % 4 === 2) bass(next, root, six * 1.6);// basse pumpée offbeat
+        const every = lvl >= 4 ? 1 : 2;                          // mélodie: croches, doubles au max
+        if (s % every === 0) {
+          const n = arpN[((s / every) | 0) % arpN.length];
+          lead(next, n);
+          if (lvl >= 2) lead(next, n * 2, 0.05);                 // octave brillante
+        }
+        if (lvl >= 3 && s % 8 === 0) stab(next, barChord[bar]);  // stabs d'accords
+        next += six; step++;
       }
       _music.timer = setTimeout(tick, 25);
     };
@@ -565,6 +603,7 @@ function applyMe(m) {
     tierUp(m.tier);
   }
   lastTier = m.tier;
+  musicLevel = Math.max(0, TIER_ORDER.indexOf(m.tier)); // la musique s'intensifie avec le rang
   me = m;
   diff = m.difficulty;
   $("tierBadge").textContent = m.tier;
