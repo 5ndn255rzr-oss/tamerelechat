@@ -175,6 +175,7 @@
 <body>
 <div class="wrap">
   <h1>RELAIS ✨<small>NE LÂCHE PAS LA CHAÎNE</small></h1>
+  <button id="musicBtn" class="musicbtn" title="Musique">🔊</button>
 
   <!-- Écran d'entrée -->
   <div id="join">
@@ -187,7 +188,6 @@
 
   <!-- Jeu -->
   <div id="game">
-    <button id="musicBtn" class="musicbtn" title="Musique">🔊</button>
     <div id="seasonLine" style="text-align:center;font-size:12px;color:#9a92c0;margin-bottom:6px"></div>
     <div class="chainbox">
       <div class="chainlabel">Chaîne mondiale</div>
@@ -420,10 +420,13 @@ function toggleMusic() {
   if (musicOn) startMusic(); else stopMusic();
   updateMusicBtn();
 }
-const _mb = document.getElementById("musicBtn"); if (_mb) _mb.onclick = toggleMusic;
-// Débloque l'audio dès le 1er contact (iOS exige un geste utilisateur pour l'audio).
-["touchstart", "pointerdown"].forEach((ev) =>
-  window.addEventListener(ev, () => { try { _ac(); } catch (e) {} }, { passive: true }));
+const _mb = document.getElementById("musicBtn");
+if (_mb) { _mb.onclick = toggleMusic; _mb.style.display = "flex"; _mb.textContent = musicOn ? "🔊" : "🔇"; }
+// Démarre la musique dès le 1er geste utilisateur, DÈS l'accueil (iOS interdit
+// l'audio sans interaction : on ne peut pas la jouer avant le premier contact).
+function _firstGesture() { try { _ac(); startMusic(); } catch (e) {} }
+["touchstart", "pointerdown", "keydown", "click"].forEach((ev) =>
+  window.addEventListener(ev, _firstGesture, { passive: true }));
 
 // --- Montée de palier : fanfare + explosion d'étincelles à l'écran ------------
 function tierUp(name) {
@@ -546,9 +549,7 @@ $("joinBtn").onclick = async () => {
   applyMe(res.me);
   $("join").style.display = "none";
   $("game").style.display = "block";
-  $("musicBtn").style.display = "flex";
-  updateMusicBtn();
-  startMusic(); // le clic "Entrer" débloque l'audio sur mobile
+  startMusic(); // au cas où (déjà lancée au 1er geste sur l'accueil) — garde anti-oubli
   requestAnimationFrame(() => drawWorld());
   newZone();
   requestAnimationFrame(loop);
