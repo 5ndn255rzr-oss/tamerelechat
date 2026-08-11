@@ -569,9 +569,8 @@ app.post("/api/break", (req, res) => {
   p.score = Math.max(0, p.score - penalty);
   p.streak = 0;
   p.combo = 0; // le combo tombe aussi
-  // Un raté fait RETOMBER la progression du palier courant à 0 (mais on ne
-  // perd pas le rang déjà gagné : xp ramené au plancher du palier actuel).
-  a.xp = tierFor(a.xp).minXp;
+  // Un raté fait TOUT retomber : retour au rang le plus bas (Bronze, xp 0).
+  a.xp = 0;
 
   // Carton rouge au-delà du seuil : suspension FIXE de 30 s.
   let banSec = 0;

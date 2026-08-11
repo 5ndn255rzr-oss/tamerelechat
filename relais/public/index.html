@@ -163,6 +163,25 @@
   .chainval.broke { animation: chainBroke .5s ease-out; }
   @keyframes chainBroke { 0%{color:#e74c3c; transform:scale(1.25)} 35%{transform:scale(.88) translateX(-5px)} 60%{transform:translateX(5px)} 100%{transform:scale(1)} }
 
+  /* --- Lumières latérales (fête foraine / casino) --- */
+  .sidelights { position:fixed; top:0; bottom:0; width:24px; z-index:3; pointer-events:none;
+    display:flex; flex-direction:column; justify-content:space-around; align-items:center; padding:10px 0;
+    animation: hueSpin 9s linear infinite; }
+  .sidelights.left { left:0; } .sidelights.right { right:0; }
+  @keyframes hueSpin { to { filter:hue-rotate(360deg); } }
+  .bulb { width:11px; height:11px; border-radius:50%; box-shadow:0 0 12px currentColor; animation: bulbBlink 1s infinite; }
+  @keyframes bulbBlink { 0%,100%{opacity:.18; transform:scale(.6)} 50%{opacity:1; transform:scale(1.25)} }
+  body.frenzy .sidelights { animation-duration:2.4s; width:30px; }
+  body.frenzy .bulb { animation-duration:.32s; box-shadow:0 0 20px currentColor; }
+
+  /* --- Avertissement épilepsie --- */
+  .epimodal { position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:rgba(6,4,14,.92); }
+  .epimodal.hide { display:none; }
+  .epibox { width:88%; max-width:360px; background:#0c0a16; border:1px solid var(--line); border-radius:20px; padding:26px 22px; text-align:center; }
+  .epiicon { font-size:42px; }
+  .epititle { font-weight:900; font-size:18px; margin:6px 0 10px; color:var(--gold); }
+  .epibox p { font-size:14px; color:#c9c2e8; line-height:1.55; margin-bottom:18px; }
+
   /* --- Leaderboards --- */
   .boards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
   .board { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:12px; }
@@ -202,6 +221,19 @@
 </head>
 <body>
 <div class="ambient" aria-hidden="true"></div>
+<div class="sidelights left" id="lightsL" aria-hidden="true"></div>
+<div class="sidelights right" id="lightsR" aria-hidden="true"></div>
+
+<!-- Avertissement photosensibilité (affiché une fois) -->
+<div class="epimodal" id="epiModal">
+  <div class="epibox">
+    <div class="epiicon">⚠️</div>
+    <div class="epititle">Avertissement photosensibilité</div>
+    <p>RELAIS contient des <b>flashs lumineux</b> et des <b>effets clignotants rapides</b> (style fête foraine). Déconseillé aux personnes épileptiques photosensibles.</p>
+    <button class="primary" id="epiOk">J'ai compris — jouer</button>
+  </div>
+</div>
+
 <div class="wrap">
   <h1>RELAIS ✨<small>NE LÂCHE PAS LA CHAÎNE</small></h1>
   <button id="musicBtn" class="musicbtn" title="Musique">🔊</button>
@@ -495,6 +527,28 @@ function _firstGesture() { try { _ac(); startMusic(); } catch (e) {} }
 ["touchstart", "pointerdown", "keydown", "click"].forEach((ev) =>
   window.addEventListener(ev, _firstGesture, { passive: true }));
 
+// Ampoules clignotantes fête foraine sur les deux bords (chenillard multicolore).
+(function buildLights() {
+  ["lightsL", "lightsR"].forEach((id) => {
+    const el = document.getElementById(id); if (!el) return;
+    for (let i = 0; i < 16; i++) {
+      const b = document.createElement("i"); b.className = "bulb";
+      b.style.color = `hsl(${(i * 42) % 360},90%,60%)`;
+      b.style.animationDelay = (i * 0.08) + "s";
+      el.appendChild(b);
+    }
+  });
+})();
+
+// Avertissement photosensibilité (une seule fois, mémorisé).
+(function epiWarn() {
+  const m = document.getElementById("epiModal"); if (!m) return;
+  let ok = false; try { ok = localStorage.getItem("relais_epi_ok") === "1"; } catch (e) {}
+  if (ok) { m.classList.add("hide"); return; }
+  const btn = document.getElementById("epiOk");
+  if (btn) btn.onclick = () => { m.classList.add("hide"); try { localStorage.setItem("relais_epi_ok", "1"); } catch (e) {} };
+})();
+
 // --- Montée de palier : fanfare + explosion d'étincelles à l'écran ------------
 function tierUp(name) {
   try { // fanfare : arpège montant + accord héroïque final + cymbale
@@ -525,6 +579,8 @@ function tierUp(name) {
   document.body.appendChild(ov);
   const wrap = document.querySelector(".wrap");
   if (wrap) { wrap.classList.add("shakeBig"); setTimeout(() => wrap.classList.remove("shakeBig"), 650); }
+  document.body.classList.add("frenzy"); // les lumières s'emballent à la montée de rang
+  setTimeout(() => { if (curComboMult < 1.6) document.body.classList.remove("frenzy"); }, 2200);
   setTimeout(() => ov.remove(), 2600);
 }
 
@@ -890,12 +946,13 @@ function showCombo(mult) {
     b.classList.add("on"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
     const arena = $("arena"); // l'arène s'auréole et chauffe avec le combo
     if (arena) { arena.style.boxShadow = `0 0 ${12 + heat * 44}px ${col}`; arena.style.borderColor = col; }
+    document.body.classList.toggle("frenzy", curComboMult >= 1.6); // les lumières s'emballent
     if (curComboMult >= 2) comboFx(curComboMult); // secousse + vibration aux gros combos
     _comboTimer = setTimeout(hideCombo, 1900); // s'efface si on marque une pause
   } else { b.classList.remove("on"); clearAura(); }
 }
 function clearAura() { const arena = $("arena"); if (arena) { arena.style.boxShadow = ""; arena.style.borderColor = ""; } }
-function hideCombo() { curComboMult = 1; hitStreak = 0; const b = $("comboBadge"); if (b) b.classList.remove("on"); clearAura(); }
+function hideCombo() { curComboMult = 1; hitStreak = 0; const b = $("comboBadge"); if (b) b.classList.remove("on"); clearAura(); document.body.classList.remove("frenzy"); }
 // Secousse d'écran + vibration (Android ; iOS ignore sans erreur) proportionnelles au combo.
 function comboFx(mult) {
   const wrap = document.querySelector(".wrap");
