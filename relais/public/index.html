@@ -360,7 +360,7 @@ function toggleMusic() {
   if (musicOn) startMusic(); else stopMusic();
   updateMusicBtn();
 }
-const _mb = $("musicBtn"); if (_mb) _mb.onclick = toggleMusic;
+const _mb = document.getElementById("musicBtn"); if (_mb) _mb.onclick = toggleMusic;
 // Débloque l'audio dès le 1er contact (iOS exige un geste utilisateur pour l'audio).
 ["touchstart", "pointerdown"].forEach((ev) =>
   window.addEventListener(ev, () => { try { _ac(); } catch (e) {} }, { passive: true }));
