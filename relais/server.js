@@ -29,10 +29,10 @@ const PORT = process.env.PORT || 3001;
 // (fraction de la barre). Le client s'en sert pour régler le défi d'adresse.
 const TIERS = [
   { name: "Bronze",  minXp: 0,    mult: 1,  sweep: 1.0, zone: 0.30 },
-  { name: "Argent",  minXp: 20,   mult: 2,  sweep: 1.35, zone: 0.23 },
-  { name: "Or",      minXp: 50,   mult: 5,  sweep: 1.8,  zone: 0.17 },
-  { name: "Diamant", minXp: 110,  mult: 12, sweep: 2.3,  zone: 0.12 },
-  { name: "Légende", minXp: 220,  mult: 30, sweep: 3.1,  zone: 0.08 },
+  { name: "Argent",  minXp: 60,   mult: 2,  sweep: 1.35, zone: 0.23 },
+  { name: "Or",      minXp: 180,  mult: 5,  sweep: 1.8,  zone: 0.17 },
+  { name: "Diamant", minXp: 420,  mult: 12, sweep: 2.3,  zone: 0.12 },
+  { name: "Légende", minXp: 900,  mult: 30, sweep: 3.1,  zone: 0.08 },
 ];
 
 function tierFor(xp) {
@@ -553,12 +553,15 @@ app.post("/api/break", (req, res) => {
   const penalty = BREAK_PENALTY * recent;
   p.score = Math.max(0, p.score - penalty);
   p.streak = 0;
+  // Un raté fait RETOMBER la progression du palier courant à 0 (mais on ne
+  // perd pas le rang déjà gagné : xp ramené au plancher du palier actuel).
+  a.xp = tierFor(a.xp).minXp;
 
-  // Carton rouge au-delà du seuil : suspension qui double à chaque récidive.
+  // Carton rouge au-delà du seuil : suspension FIXE de 30 s.
   let banSec = 0;
   if (recent >= GRIEF_TRIP) {
     a.offenses += 1;
-    banSec = Math.min(120, 10 * 2 ** (a.offenses - 1)); // 10, 20, 40, 80, 120s
+    banSec = 30; // sanction fixe : 30 secondes
     a.bannedUntil = now + banSec * 1000;
     a.breakTimes = [];
     console.log(`[carton] ${a.name} suspendu ${banSec}s (récidive #${a.offenses})`);
