@@ -437,6 +437,12 @@ const SHOP = {
     { id: "fire", name: "Brasier", price: 199, color: "#ff7a1a" },
     { id: "ice", name: "Glace", price: 199, color: "#5ad1ff" },
     { id: "gold", name: "Or massif", price: 399, color: "#ffd700" },
+    { id: "rainbow", name: "Arc-en-ciel", price: 299, color: "#ff4d6d", emoji: "🌈" },
+    { id: "unicorn", name: "Licorne", price: 299, color: "#ff9ff3", emoji: "🦄" },
+    { id: "star", name: "Étoile filante", price: 199, color: "#ffd54a", emoji: "⭐" },
+    { id: "heart", name: "Cœur", price: 199, color: "#ff4d6d", emoji: "❤️" },
+    { id: "bolt", name: "Éclair", price: 199, color: "#00d2ff", emoji: "⚡" },
+    { id: "skull", name: "Tête de mort", price: 199, color: "#c9c2e8", emoji: "💀" },
   ],
   // Sons de bris joués quand la chaîne casse (cosmétique audio).
   breaks: [
