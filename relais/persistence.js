@@ -5,8 +5,14 @@
 // reste en mémoire comme avant). On stocke un seul instantané JSON dans une
 // table `relais_state` (une ligne id=1, colonne jsonb `data`). Voir SETUP.md.
 
-const URL = process.env.SUPABASE_URL;
-const KEY = process.env.SUPABASE_KEY;
+// Normalise l'URL : on tolère un espace, un "/" final ou un "/rest/v1" collé
+// par erreur (cause fréquente de l'erreur PostgREST "Invalid path", PGRST125).
+const URL = (process.env.SUPABASE_URL || "")
+  .trim()
+  .replace(/\/+$/, "")       // enlève les "/" finaux
+  .replace(/\/rest\/v1$/, "") // enlève un "/rest/v1" collé par erreur
+  .replace(/\/+$/, "");
+const KEY = (process.env.SUPABASE_KEY || "").trim();
 const TABLE = process.env.SUPABASE_TABLE || "relais_state";
 
 export const persistenceEnabled = !!(URL && KEY);
