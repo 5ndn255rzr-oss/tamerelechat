@@ -949,13 +949,19 @@ const SPARK_SKINS = {
 function applyCosmetics() {
   const skin = SPARK_SKINS[me?.equipped?.spark] || SPARK_SKINS.default;
   const n = $("needle"); if (!n) return;
-  n.style.boxShadow = `0 0 12px #fff, 0 0 24px ${skin.color}`;
   n.classList.toggle("rainbow", !!skin.rainbow);
   let emo = document.getElementById("needleEmo");
   if (skin.emoji) {
+    // L'emoji REMPLACE la barre : on masque la ligne blanche, seul l'emoji bouge.
+    n.style.background = "transparent";
+    n.style.boxShadow = "none";
     if (!emo) { emo = document.createElement("span"); emo.id = "needleEmo"; emo.className = "needle-emo"; n.appendChild(emo); }
     emo.textContent = skin.emoji;
-  } else if (emo) { emo.remove(); }
+  } else {
+    n.style.background = ""; // rétablit la barre blanche (CSS)
+    n.style.boxShadow = `0 0 12px #fff, 0 0 24px ${skin.color}`;
+    if (emo) emo.remove();
+  }
 }
 
 function flash(cls) {
