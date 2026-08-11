@@ -135,6 +135,34 @@
   .comboShake { animation: comboShake .16s ease-in-out; }
   @keyframes comboShake { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-3px,1px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,1px)} }
 
+  /* --- Fond animé permanent (jamais de vide) --- */
+  .ambient { position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden; }
+  .ambient::before, .ambient::after { content:""; position:absolute; width:65vmax; height:65vmax;
+    border-radius:50%; filter:blur(70px); opacity:.20; }
+  .ambient::before { background:radial-gradient(circle,#6c5ce7,transparent 70%); top:-22%; left:-12%; animation: drift1 19s ease-in-out infinite; }
+  .ambient::after { background:radial-gradient(circle,#e7405f,transparent 70%); bottom:-22%; right:-12%; animation: drift2 23s ease-in-out infinite; }
+  @keyframes drift1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(22%,16%) scale(1.15)} }
+  @keyframes drift2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-16%,-13%) scale(1.1)} }
+
+  /* --- Particules d'impact (passe réussie) --- */
+  .hitpx { position:absolute; border-radius:50%; pointer-events:none; box-shadow:0 0 8px currentColor;
+    animation: hitpx .6s ease-out forwards; }
+  @keyframes hitpx { 0%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+    100%{opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.25)} }
+  .chainval.pop { animation: chainPop .22s ease-out; }
+  @keyframes chainPop { 0%{transform:scale(1)} 40%{transform:scale(1.18)} 100%{transform:scale(1)} }
+
+  /* --- Cassure : flash rouge + éclats + compteur qui se brise --- */
+  .breakfx { position:fixed; inset:0; z-index:48; pointer-events:none; overflow:hidden; }
+  .bf-flash { position:absolute; inset:0; background:radial-gradient(circle at 50% 45%, rgba(231,76,60,.5), rgba(231,76,60,0) 60%); animation: bfFlash .5s ease-out forwards; }
+  @keyframes bfFlash { 0%{opacity:0} 12%{opacity:1} 100%{opacity:0} }
+  .bshard { position:absolute; left:50%; top:46%; border-radius:2px; box-shadow:0 0 8px currentColor;
+    animation: bshard .7s cubic-bezier(.2,.7,.4,1) forwards; }
+  @keyframes bshard { 0%{opacity:1; transform:translate(-50%,-50%) rotate(0)}
+    100%{opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(200deg) scale(.4)} }
+  .chainval.broke { animation: chainBroke .5s ease-out; }
+  @keyframes chainBroke { 0%{color:#e74c3c; transform:scale(1.25)} 35%{transform:scale(.88) translateX(-5px)} 60%{transform:translateX(5px)} 100%{transform:scale(1)} }
+
   /* --- Leaderboards --- */
   .boards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
   .board { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:12px; }
@@ -173,6 +201,7 @@
 </style>
 </head>
 <body>
+<div class="ambient" aria-hidden="true"></div>
 <div class="wrap">
   <h1>RELAIS ✨<small>NE LÂCHE PAS LA CHAÎNE</small></h1>
   <button id="musicBtn" class="musicbtn" title="Musique">🔊</button>
@@ -658,6 +687,7 @@ function attempt() {
     hitStreak++;
     playHit(hitStreak); // 🔊 son de réussite qui monte avec le combo
     flash("hit");
+    hitFx(hitStreak); // ✨ particules + pop du compteur
     floatText("+" + Math.round(BASE_POINTS * (me?.mult || 1) * curComboMult), "#2ecc71");
     $("chainVal").textContent = (parseInt($("chainVal").textContent, 10) || 0) + 1;
     newZone();
@@ -674,6 +704,7 @@ function attempt() {
     hitStreak = 0; // combo perdu
     hideCombo();
     flash("miss");
+    breakFx(); // 💥 flash rouge + éclats + secousse (la casse est spectaculaire, pas vide)
     playBreak(); // 🔊 la chaîne se brise
     floatText("CASSÉ !", "#e74c3c");
     $("chainVal").textContent = "0";
@@ -857,16 +888,58 @@ function showCombo(mult) {
     b.style.color = col; b.style.textShadow = `0 0 16px ${col}`;
     b.style.fontSize = (20 + heat * 16) + "px";
     b.classList.add("on"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
+    const arena = $("arena"); // l'arène s'auréole et chauffe avec le combo
+    if (arena) { arena.style.boxShadow = `0 0 ${12 + heat * 44}px ${col}`; arena.style.borderColor = col; }
     if (curComboMult >= 2) comboFx(curComboMult); // secousse + vibration aux gros combos
     _comboTimer = setTimeout(hideCombo, 1900); // s'efface si on marque une pause
-  } else { b.classList.remove("on"); }
+  } else { b.classList.remove("on"); clearAura(); }
 }
-function hideCombo() { curComboMult = 1; hitStreak = 0; const b = $("comboBadge"); if (b) b.classList.remove("on"); }
+function clearAura() { const arena = $("arena"); if (arena) { arena.style.boxShadow = ""; arena.style.borderColor = ""; } }
+function hideCombo() { curComboMult = 1; hitStreak = 0; const b = $("comboBadge"); if (b) b.classList.remove("on"); clearAura(); }
 // Secousse d'écran + vibration (Android ; iOS ignore sans erreur) proportionnelles au combo.
 function comboFx(mult) {
   const wrap = document.querySelector(".wrap");
   if (wrap) { wrap.classList.remove("comboShake"); void wrap.offsetWidth; wrap.classList.add("comboShake"); }
   try { if (navigator.vibrate) navigator.vibrate(Math.round(12 + (mult - 2) * 28)); } catch (e) {}
+}
+
+// Gerbe de particules + pop du compteur à chaque passe réussie (grossit avec le combo).
+function hitFx(combo) {
+  const arena = $("arena"); if (!arena) return;
+  const x = needlePos * 90 + 5, n = 4 + Math.min(11, combo | 0);
+  const cols = ["#2ecc71", "#7bed9f", "#ffd54a", "#a29bfe", "#5ad1ff"];
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("i"); p.className = "hitpx";
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, dist = 28 + Math.random() * 64;
+    p.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+    p.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+    p.style.left = x + "%"; p.style.top = "50%";
+    const c = cols[i % cols.length]; p.style.background = c; p.style.color = c;
+    const sz = 4 + Math.random() * 5; p.style.width = p.style.height = sz + "px";
+    arena.appendChild(p); setTimeout(() => p.remove(), 620);
+  }
+  const cv = $("chainVal"); if (cv) { cv.classList.remove("pop"); void cv.offsetWidth; cv.classList.add("pop"); }
+}
+// Cassure : flash rouge plein écran + éclats + secousse + compteur qui se brise.
+function breakFx() {
+  const ov = document.createElement("div"); ov.className = "breakfx";
+  const flash = document.createElement("div"); flash.className = "bf-flash"; ov.appendChild(flash);
+  const cols = ["#e74c3c", "#ff7a1a", "#ffb3b3", "#c0392b", "#ffd54a"];
+  for (let i = 0; i < 22; i++) {
+    const s = document.createElement("i"); s.className = "bshard";
+    const ang = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 190;
+    s.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+    s.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+    const c = cols[i % cols.length]; s.style.background = c; s.style.color = c;
+    const sz = 5 + Math.random() * 9; s.style.width = s.style.height = sz + "px";
+    ov.appendChild(s);
+  }
+  document.body.appendChild(ov);
+  const wrap = document.querySelector(".wrap");
+  if (wrap) { wrap.classList.remove("shakeBig"); void wrap.offsetWidth; wrap.classList.add("shakeBig"); }
+  const cv = $("chainVal"); if (cv) { cv.classList.remove("broke"); void cv.offsetWidth; cv.classList.add("broke"); }
+  try { if (navigator.vibrate) navigator.vibrate([30, 40, 60]); } catch (e) {}
+  setTimeout(() => ov.remove(), 720);
 }
 
 $("arena").addEventListener("click", attempt);
