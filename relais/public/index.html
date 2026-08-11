@@ -476,44 +476,39 @@ function startMusic() {
       o.connect(g).connect(out); o.start(t); o.stop(t + 0.24);
     });
 
-    // Progression Am-F-C-G (accrocheuse, uplifting) : basse, notes d'arpège, accord.
-    const barBass = [55.00, 43.65, 65.41, 49.00];
-    const barArp = [
-      [220.00, 261.63, 329.63, 440.00],  // Am
-      [174.61, 220.00, 261.63, 349.23],  // F
-      [261.63, 329.63, 392.00, 523.25],  // C
-      [196.00, 246.94, 293.66, 392.00],  // G
-    ];
-    const barChord = [
-      [220, 261.63, 329.63], [174.61, 220, 261.63], [261.63, 329.63, 392], [196, 246.94, 293.66],
-    ];
+    // 808 sub-bass (trap) : sinus profond avec une petite glisse de hauteur.
+    const sub808 = (t, freq, dur) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(freq * 1.5, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
+      g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.006, t + dur);
+      o.connect(g).connect(out); o.start(t); o.stop(t + dur + 0.02);
+    };
+
+    // --- Beat TRAP + mélodie ORIENTALE pentatonique (style meme rap chinois) ---
+    const barRoot = [55.00, 55.00, 43.65, 49.00];               // Am Am F G (808)
+    const PENTA_HZ = [329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 784.00]; // E G A C D E G
+    const HOOK = [0,2,3,2, 0,3,2,0, 4,3,2,0, 2,3,4,5];          // riff oriental accrocheur
+    const K  = [1,0,0,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];            // kick syncopé trap
+    const SN = [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0];            // snare + clap sur le 3
     let step = 0, next = a.currentTime + 0.12;
 
     // Séquenceur à anticipation : lit musicLevel EN DIRECT -> plus le rang monte,
-    // plus la prod accélère et empile les couches (sans coupure).
+    // plus il y a de rolls de charley et la mélodie se densifie (sans coupure).
     const tick = () => {
       if (!_music) return;
-      const lvl = Math.min(4, (musicLevel | 0) + (musicBoost | 0)); // rang + boost festif
-      const six = 15 / (120 + lvl * 7); // 120 → 148 BPM selon le rang
+      const lvl = Math.min(4, (musicLevel | 0) + (musicBoost | 0));
+      const six = 15 / (138 + lvl * 4); // ~138-154 BPM (feel trap mi-temps)
       while (next < a.currentTime + 0.13) {
-        const s = step % 16, bar = (step / 16 | 0) % 4;
-        const root = barBass[bar], arpN = barArp[bar];
-        if (s % 4 === 0) kick(next);                              // 4/4
-        if (lvl >= 2 && (s === 10 || s === 14)) kick(next);      // kicks syncopés
-        if (s % 2 === 1) hat(next, false);                       // charley contretemps
-        if (lvl >= 1 && s % 4 === 2) hat(next, true);            // charley ouvert
-        if (lvl >= 3 && s % 2 === 0) hat(next, false);           // charley 16e (dense)
-        if (lvl >= 1 && (s === 4 || s === 12)) snare(next);      // backbeat 2&4
-        if (lvl >= 3 && (s === 4 || s === 12)) clap(next);       // clap qui double
-        if (s % 4 === 0) bass(next, root, six * 3.5);            // basse au temps
-        if (lvl >= 2 && s % 4 === 2) bass(next, root, six * 1.6);// basse pumpée offbeat
-        const every = lvl >= 4 ? 1 : 2;                          // mélodie: croches, doubles au max
-        if (s % every === 0) {
-          const n = arpN[((s / every) | 0) % arpN.length];
-          lead(next, n);
-          if (lvl >= 2) lead(next, n * 2, 0.05);                 // octave brillante
-        }
-        if (lvl >= 3 && s % 8 === 0) stab(next, barChord[bar]);  // stabs d'accords
+        const s = step % 16, bar = (step / 16 | 0) % 4, root = barRoot[bar];
+        if (K[s]) kick(next);
+        if (SN[s]) { snare(next); clap(next); }
+        if (s === 0) sub808(next, root, six * 14);               // 808 tenu par mesure
+        if (lvl >= 2 && s === 6) sub808(next, root, six * 4);    // 808 syncopé
+        hat(next, false);                                        // charley en doubles-croches
+        if (s === 15) { hat(next + six / 3, false); hat(next + six * 2 / 3, false); } // roll de fin
+        if (lvl >= 3 && (s === 7 || s === 11)) hat(next + six / 2, false);            // hats en plus
+        const playLead = lvl >= 4 ? true : (s % 2 === 0);        // croches, doubles-croches au max
+        if (playLead) { const n = PENTA_HZ[HOOK[s]]; lead(next, n); if (lvl >= 2) lead(next, n * 2, 0.045); }
         next += six; step++;
       }
       _music.timer = setTimeout(tick, 25);
