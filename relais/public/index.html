@@ -132,6 +132,8 @@
   .combo.on { opacity:1; }
   .combo.pulse { animation: comboPulse .18s ease-out; }
   @keyframes comboPulse { 0%{transform:translateX(-50%) scale(1)} 45%{transform:translateX(-50%) scale(1.28)} 100%{transform:translateX(-50%) scale(1)} }
+  .comboShake { animation: comboShake .16s ease-in-out; }
+  @keyframes comboShake { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-3px,1px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,1px)} }
 
   /* --- Leaderboards --- */
   .boards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
@@ -300,18 +302,22 @@ function playBreak(kind) {
   } catch (e) {}
 }
 
-// Son de RÉUSSITE (tap dans le vert) — petit "pluck" clair qui MONTE avec la
-// série (effet combo satisfaisant). Se cale sur une gamme pentatonique.
+// Son de RÉUSSITE (tap dans le vert) — "pluck" clair qui MONTE avec le combo :
+// grimpe une gamme pentatonique octave après octave, plus fort et plus pétillant
+// à mesure que la série s'allonge.
 let hitStreak = 0;
-const HIT_SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21]; // demi-tons (penta majeure)
+const PENTA = [0, 2, 4, 7, 9]; // demi-tons (penta majeure)
 function playHit(combo) {
   try {
     const a = _ac(), t = a.currentTime;
-    const semis = HIT_SCALE[Math.min(HIT_SCALE.length - 1, combo || 0)];
-    const f = 523.25 * Math.pow(2, semis / 12); // C5 qui grimpe dans la gamme
-    _tone(a, t, "sine", f, f, 0.13, 0.22);
-    _tone(a, t, "triangle", f * 1.5, f * 1.5, 0.10, 0.10); // quinte
-    _tone(a, t + 0.004, "sine", f * 2, f * 2, 0.06, 0.05);  // octave brillante
+    const lvl = Math.min(24, combo || 0);
+    const semis = PENTA[lvl % 5] + 12 * Math.floor(lvl / 5); // monte d'octave en octave
+    const f = 523.25 * Math.pow(2, semis / 12);
+    const vol = 0.2 + Math.min(0.18, lvl * 0.012); // un peu plus fort avec le combo
+    _tone(a, t, "sine", f, f, 0.13, vol);
+    _tone(a, t, "triangle", f * 1.5, f * 1.5, 0.10, vol * 0.5);   // quinte
+    _tone(a, t + 0.004, "sine", f * 2, f * 2, 0.06, vol * 0.28);  // octave
+    if (lvl >= 6) _tone(a, t + 0.01, "square", f * 3, f * 3, 0.05, 0.045); // étincelle aiguë
   } catch (e) {}
 }
 
@@ -811,10 +817,17 @@ function showCombo(mult) {
     b.style.color = col; b.style.textShadow = `0 0 16px ${col}`;
     b.style.fontSize = (20 + heat * 16) + "px";
     b.classList.add("on"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
+    if (curComboMult >= 2) comboFx(curComboMult); // secousse + vibration aux gros combos
     _comboTimer = setTimeout(hideCombo, 1900); // s'efface si on marque une pause
   } else { b.classList.remove("on"); }
 }
-function hideCombo() { curComboMult = 1; const b = $("comboBadge"); if (b) b.classList.remove("on"); }
+function hideCombo() { curComboMult = 1; hitStreak = 0; const b = $("comboBadge"); if (b) b.classList.remove("on"); }
+// Secousse d'écran + vibration (Android ; iOS ignore sans erreur) proportionnelles au combo.
+function comboFx(mult) {
+  const wrap = document.querySelector(".wrap");
+  if (wrap) { wrap.classList.remove("comboShake"); void wrap.offsetWidth; wrap.classList.add("comboShake"); }
+  try { if (navigator.vibrate) navigator.vibrate(Math.round(12 + (mult - 2) * 28)); } catch (e) {}
+}
 
 $("arena").addEventListener("click", attempt);
 $("arena").addEventListener("touchstart", (e) => { e.preventDefault(); attempt(); }, { passive: false });
