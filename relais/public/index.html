@@ -412,6 +412,13 @@ let musicBoost = 0; // +1 temporaire lors des événements festifs (fait "évolu
 let _boostT = null;
 try { musicOn = localStorage.getItem("relais_music") !== "off"; } catch (e) {}
 
+// Aperçu : ?lvl=0..4 dans l'URL force le niveau (musique + intensité) pour tester un rang.
+let forceLevel = null;
+try {
+  const p = new URLSearchParams(location.search).get("lvl");
+  if (p !== null && p !== "") { forceLevel = Math.max(0, Math.min(4, parseInt(p, 10) || 0)); musicLevel = forceLevel; }
+} catch (e) {}
+
 function startMusic() {
   if (_music || !musicOn) return;
   try {
@@ -705,7 +712,7 @@ function applyMe(m) {
     tierUp(m.tier);
   }
   lastTier = m.tier;
-  musicLevel = Math.max(0, TIER_ORDER.indexOf(m.tier)); // la musique s'intensifie avec le rang
+  musicLevel = forceLevel != null ? forceLevel : Math.max(0, TIER_ORDER.indexOf(m.tier)); // musique ∝ rang (ou forcée par ?lvl=)
   me = m;
   diff = m.difficulty;
   $("tierBadge").textContent = m.tier;
