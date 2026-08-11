@@ -56,6 +56,13 @@ const MIN_PASS_MS = 180;        // intervalle mini entre 2 passes (bloque le spa
 const GRIEF_WINDOW_MS = 30000;  // fenêtre de détection du sabotage
 const GRIEF_TRIP = 3;           // nb de cassures dans la fenêtre -> carton rouge
 const BREAK_PENALTY = 50;       // malus de score par cassure (croissant)
+
+// --- Combo : clics validés rapprochés -> multiplicateur croissant ------------
+const COMBO_WINDOW_MS = 1800;   // délai max entre 2 passes pour garder/monter le combo
+const COMBO_STEP = 0.15;        // bonus de multiplicateur par cran de combo
+const COMBO_MAX_BONUS = 2.0;    // bonus max -> multiplicateur combo plafonné à ×3
+const COMBO_CAP = Math.ceil(COMBO_MAX_BONUS / COMBO_STEP); // cran de combo max
+const comboMultOf = (combo) => +(1 + Math.min(COMBO_MAX_BONUS, (combo || 0) * COMBO_STEP)).toFixed(2);
 const cities = new Map();  // "Ville" -> { country, score, passes }
 const countries = new Map(); // "Pays" -> { score, passes }
 
@@ -321,6 +328,8 @@ function publicPlayer(p) {
     tierProgress: nt ? Math.round(((a.xp - tier.minXp) / (nt.minXp - tier.minXp)) * 100) : 100,
     tierXp: a.xp - tier.minXp,
     tierSize: nt ? nt.minXp - tier.minXp : 0,
+    combo: p.combo || 0,
+    comboMult: comboMultOf(p.combo),
   };
 }
 
@@ -355,7 +364,7 @@ app.post("/api/join", (req, res) => {
   if (!account.days.includes(day)) account.days.push(day);
 
   const id = Math.random().toString(36).slice(2, 10);
-  const player = { account, name, city, country, score: 0, passes: 0, streak: 0, lastPassAt: 0,
+  const player = { account, name, city, country, score: 0, passes: 0, streak: 0, combo: 0, lastPassAt: 0,
     rewardToken: null, rewardExp: 0 };
   players.set(id, player);
   console.log(`[join] ${name} (${city}, ${country}) rang ${account.xp}xp -> ${id}`);
@@ -505,10 +514,16 @@ app.post("/api/pass", (req, res) => {
   if (now - p.lastPassAt < MIN_PASS_MS) {
     return res.status(429).json({ error: "trop rapide", me: publicPlayer(p) });
   }
+  const gap = p.lastPassAt > 0 ? now - p.lastPassAt : Infinity;
   p.lastPassAt = now;
 
+  // Combo : passe validée rapprochée -> le combo monte ; sinon il retombe.
+  if (gap < COMBO_WINDOW_MS) p.combo = Math.min(COMBO_CAP, (p.combo || 0) + 1);
+  else p.combo = 0;
+  const comboMult = comboMultOf(p.combo);
+
   const tier = tierFor(a.xp);
-  const gained = BASE_POINTS * tier.mult;
+  const gained = Math.round(BASE_POINTS * tier.mult * comboMult);
   p.score += gained;
   a.xp += 1;
   p.passes += 1;
@@ -520,7 +535,7 @@ app.post("/api/pass", (req, res) => {
   chain.current += 1;
   if (chain.current > chain.best) chain.best = chain.current;
 
-  res.json({ ok: true, gained, chain: chain.current, me: publicPlayer(p) });
+  res.json({ ok: true, gained, combo: p.combo, comboMult, chain: chain.current, me: publicPlayer(p) });
   broadcastWorld(); // les autres voient ta passe instantanément
 });
 
@@ -553,6 +568,7 @@ app.post("/api/break", (req, res) => {
   const penalty = BREAK_PENALTY * recent;
   p.score = Math.max(0, p.score - penalty);
   p.streak = 0;
+  p.combo = 0; // le combo tombe aussi
   // Un raté fait RETOMBER la progression du palier courant à 0 (mais on ne
   // perd pas le rang déjà gagné : xp ramené au plancher du palier actuel).
   a.xp = tierFor(a.xp).minXp;

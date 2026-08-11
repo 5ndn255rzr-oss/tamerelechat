@@ -126,6 +126,12 @@
   .arena-big { position:absolute; top:18px; width:100%; text-align:center; font-size:15px; font-weight:800; color:#fff; }
   .float { position:absolute; font-weight:900; font-size:22px; pointer-events:none; animation: floatUp .8s ease-out forwards; }
   @keyframes floatUp { from{opacity:1; transform:translateY(0)} to{opacity:0; transform:translateY(-46px)} }
+  .combo { position:absolute; top:8px; left:50%; transform:translateX(-50%); z-index:6;
+    font-weight:900; letter-spacing:1px; color:var(--gold); opacity:0; transition:opacity .15s;
+    pointer-events:none; white-space:nowrap; }
+  .combo.on { opacity:1; }
+  .combo.pulse { animation: comboPulse .18s ease-out; }
+  @keyframes comboPulse { 0%{transform:translateX(-50%) scale(1)} 45%{transform:translateX(-50%) scale(1.28)} 100%{transform:translateX(-50%) scale(1)} }
 
   /* --- Leaderboards --- */
   .boards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
@@ -198,6 +204,7 @@
 
     <div id="arena">
       <div class="arena-big" id="arenaBig">Tape quand le trait passe dans le vert</div>
+      <div class="combo" id="comboBadge"></div>
       <div class="track" id="track">
         <div class="zone" id="zone"></div>
         <div class="needle" id="needle"></div>
@@ -605,7 +612,7 @@ function attempt() {
     hitStreak++;
     playHit(hitStreak); // 🔊 son de réussite qui monte avec le combo
     flash("hit");
-    floatText("+" + BASE_POINTS * (me?.mult || 1), "#2ecc71");
+    floatText("+" + Math.round(BASE_POINTS * (me?.mult || 1) * curComboMult), "#2ecc71");
     $("chainVal").textContent = (parseInt($("chainVal").textContent, 10) || 0) + 1;
     newZone();
     // --- confirmation serveur (recale les valeurs autoritaires) ---
@@ -613,11 +620,13 @@ function attempt() {
       if (status === 403) { applyBan(body); return; }   // suspendu
       if (status === 429) return;                        // trop rapide : SSE recalera la chaîne
       if (body && body.chain != null) $("chainVal").textContent = body.chain;
+      if (body && body.comboMult) showCombo(body.comboMult); // multiplicateur de combo
       if (body && body.me) applyMe(body.me);
     }).catch(() => {});
   } else {
     // --- raté : bris immédiat ---
     hitStreak = 0; // combo perdu
+    hideCombo();
     flash("miss");
     playBreak(); // 🔊 la chaîne se brise
     floatText("CASSÉ !", "#e74c3c");
@@ -787,6 +796,25 @@ function floatText(txt, color) {
   $("arena").appendChild(el);
   setTimeout(() => el.remove(), 800);
 }
+
+// --- Combo : multiplicateur qui monte quand on enchaîne des passes rapprochées.
+let curComboMult = 1;
+let _comboTimer = null;
+function showCombo(mult) {
+  curComboMult = mult || 1;
+  const b = $("comboBadge"); if (!b) return;
+  clearTimeout(_comboTimer);
+  if (curComboMult > 1) {
+    b.textContent = "COMBO ×" + curComboMult;
+    const heat = Math.min(1, (curComboMult - 1) / 2); // 0 → 1 selon l'intensité
+    const col = heat < 0.5 ? "#ffd54a" : heat < 0.85 ? "#ff9a3c" : "#ff4d6d";
+    b.style.color = col; b.style.textShadow = `0 0 16px ${col}`;
+    b.style.fontSize = (20 + heat * 16) + "px";
+    b.classList.add("on"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
+    _comboTimer = setTimeout(hideCombo, 1900); // s'efface si on marque une pause
+  } else { b.classList.remove("on"); }
+}
+function hideCombo() { curComboMult = 1; const b = $("comboBadge"); if (b) b.classList.remove("on"); }
 
 $("arena").addEventListener("click", attempt);
 $("arena").addEventListener("touchstart", (e) => { e.preventDefault(); attempt(); }, { passive: false });
