@@ -423,10 +423,11 @@ function startMusic() {
   if (_music || !musicOn) return;
   try {
     const a = _ac();
-    const comp = a.createDynamicsCompressor(); // évite le clipping des transitoires
+    const comp = a.createDynamicsCompressor(); // doux, pour ne pas "pomper" tout le mix
+    comp.threshold.value = -14; comp.knee.value = 20; comp.ratio.value = 3; comp.attack.value = 0.006; comp.release.value = 0.18;
     const out = a.createGain();
     out.gain.setValueAtTime(0.0001, a.currentTime);
-    out.gain.linearRampToValueAtTime(0.5, a.currentTime + 1);
+    out.gain.linearRampToValueAtTime(0.62, a.currentTime + 1);
     out.connect(comp); comp.connect(a.destination);
 
     // --- percussions & synthés (synthèse pure) ---
@@ -463,7 +464,7 @@ function startMusic() {
     const lead = (t, freq, v) => {
       const o = a.createOscillator(), g = a.createGain();
       o.type = "square"; o.frequency.value = freq;
-      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v || 0.09, t + 0.006);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v || 0.13, t + 0.006);
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
       o.connect(g).connect(out); o.start(t); o.stop(t + 0.16);
     };
@@ -483,12 +484,19 @@ function startMusic() {
       o.connect(g).connect(out); o.start(t); o.stop(t + 0.24);
     });
 
-    // 808 sub-bass (trap) : sinus profond avec une petite glisse de hauteur.
+    // 808 sub-bass (trap) : sinus profond + harmonique audible sur petits HP.
     const sub808 = (t, freq, dur) => {
-      const o = a.createOscillator(), g = a.createGain();
-      o.type = "sine"; o.frequency.setValueAtTime(freq * 1.5, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
-      g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.006, t + dur);
-      o.connect(g).connect(out); o.start(t); o.stop(t + dur + 0.02);
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.006, t + dur);
+      g.connect(out);
+      const o = a.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(freq * 1.5, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
+      o.connect(g); o.start(t); o.stop(t + dur + 0.02);
+      // harmonique 1-2 octaves au-dessus -> reste audible sur HP d'ordi/téléphone
+      const o2 = a.createOscillator(); o2.type = "triangle";
+      o2.frequency.setValueAtTime(freq * 3, t); o2.frequency.exponentialRampToValueAtTime(freq * 2, t + 0.06);
+      const g2 = a.createGain(); g2.gain.setValueAtTime(0.09, t); g2.gain.exponentialRampToValueAtTime(0.004, t + Math.min(dur, 0.45));
+      o2.connect(g2).connect(out); o2.start(t); o2.stop(t + Math.min(dur, 0.55) + 0.02);
     };
 
     // --- Beat TRAP + mélodie ORIENTALE pentatonique (style meme rap chinois) ---
