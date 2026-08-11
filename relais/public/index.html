@@ -355,7 +355,15 @@ const BASE_POINTS = 10; // doit refléter server.js — juste pour l'affichage o
 
 // Sons de BRIS (la chaîne casse) — synthèse Web Audio, 4 variantes (cosmétique).
 let _actx;
-function _ac() { _actx = _actx || new (window.AudioContext || window.webkitAudioContext)(); if (_actx.state === "suspended") _actx.resume(); return _actx; }
+function _ac() {
+  if (!_actx) {
+    _actx = new (window.AudioContext || window.webkitAudioContext)();
+    // Déblocage audio Safari/iOS : jouer un buffer muet dans le geste utilisateur.
+    try { const b = _actx.createBuffer(1, 1, 22050); const s = _actx.createBufferSource(); s.buffer = b; s.connect(_actx.destination); s.start(0); } catch (e) {}
+  }
+  if (_actx.state === "suspended") { try { _actx.resume(); } catch (e) {} }
+  return _actx;
+}
 function _noise(a, t, dur, hpF, lpF, vol) {
   const buf = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate);
   const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -547,14 +555,22 @@ function updateMusicBtn() { const b = $("musicBtn"); if (b) b.textContent = musi
 function toggleMusic() {
   musicOn = !musicOn;
   try { localStorage.setItem("relais_music", musicOn ? "on" : "off"); } catch (e) {}
-  if (musicOn) startMusic(); else stopMusic();
+  if (musicOn) { const ac = _ac(); if (ac.state === "running") startMusic(); else ac.resume().then(startMusic).catch(() => {}); }
+  else stopMusic();
   updateMusicBtn();
 }
 const _mb = document.getElementById("musicBtn");
 if (_mb) { _mb.onclick = toggleMusic; _mb.style.display = "flex"; _mb.textContent = musicOn ? "🔊" : "🔇"; }
 // Démarre la musique dès le 1er geste utilisateur, DÈS l'accueil (iOS interdit
 // l'audio sans interaction : on ne peut pas la jouer avant le premier contact).
-function _firstGesture() { try { _ac(); startMusic(); } catch (e) {} }
+function _firstGesture() {
+  try {
+    const ac = _ac();
+    const go = () => { if (musicOn && !_music) startMusic(); };
+    if (ac.state === "running") go();
+    else { ac.resume().then(go).catch(() => {}); setTimeout(go, 350); } // reprise async
+  } catch (e) {}
+}
 ["touchstart", "pointerdown", "keydown", "click"].forEach((ev) =>
   window.addEventListener(ev, _firstGesture, { passive: true }));
 
