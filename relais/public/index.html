@@ -704,8 +704,21 @@ $("joinBtn").onclick = async () => {
 };
 
 const TIER_ORDER = ["Bronze", "Argent", "Or", "Diamant", "Légende"];
+const TIER_PREVIEW = [
+  { name: "Bronze", mult: 1, sweep: 1.0, zone: 0.30 },
+  { name: "Argent", mult: 2, sweep: 1.35, zone: 0.23 },
+  { name: "Or", mult: 5, sweep: 1.8, zone: 0.17 },
+  { name: "Diamant", mult: 12, sweep: 2.3, zone: 0.12 },
+  { name: "Légende", mult: 30, sweep: 3.1, zone: 0.08 },
+];
 let lastTier = null;
 function applyMe(m) {
+  if (forceLevel != null) { // aperçu ?lvl= : on force le rang affiché + la difficulté
+    const tp = TIER_PREVIEW[forceLevel];
+    m = { ...m, tier: tp.name, mult: tp.mult, difficulty: { sweep: tp.sweep, zone: tp.zone },
+      nextTier: forceLevel >= 4 ? null : { name: TIER_PREVIEW[forceLevel + 1].name, xpNeeded: 0 },
+      tierProgress: forceLevel >= 4 ? 100 : 0, tierXp: 0, tierSize: forceLevel >= 4 ? 0 : 60 };
+  }
   // Détection de montée de palier (pas au tout premier chargement).
   if (lastTier !== null && m.tier !== lastTier
       && TIER_ORDER.indexOf(m.tier) > TIER_ORDER.indexOf(lastTier)) {
