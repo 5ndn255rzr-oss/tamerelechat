@@ -29,10 +29,10 @@ const PORT = process.env.PORT || 3001;
 // (fraction de la barre). Le client s'en sert pour régler le défi d'adresse.
 const TIERS = [
   { name: "Bronze",  minXp: 0,    mult: 1,  sweep: 1.0, zone: 0.30 },
-  { name: "Argent",  minXp: 60,   mult: 2,  sweep: 1.35, zone: 0.23 },
-  { name: "Or",      minXp: 180,  mult: 5,  sweep: 1.8,  zone: 0.17 },
-  { name: "Diamant", minXp: 420,  mult: 12, sweep: 2.3,  zone: 0.12 },
-  { name: "Légende", minXp: 900,  mult: 30, sweep: 3.1,  zone: 0.08 },
+  { name: "Argent",  minXp: 20,   mult: 2,  sweep: 1.35, zone: 0.23 },
+  { name: "Or",      minXp: 50,   mult: 5,  sweep: 1.8,  zone: 0.17 },
+  { name: "Diamant", minXp: 110,  mult: 12, sweep: 2.3,  zone: 0.12 },
+  { name: "Légende", minXp: 220,  mult: 30, sweep: 3.1,  zone: 0.08 },
 ];
 
 function tierFor(xp) {
@@ -317,6 +317,10 @@ function publicPlayer(p) {
     mult: tier.mult,
     difficulty: { sweep: tier.sweep, zone: tier.zone },
     nextTier: nt ? { name: nt.name, xpNeeded: nt.minXp - a.xp } : null,
+    // Progression réelle dans le palier courant, pour la barre + le compteur "X/Y".
+    tierProgress: nt ? Math.round(((a.xp - tier.minXp) / (nt.minXp - tier.minXp)) * 100) : 100,
+    tierXp: a.xp - tier.minXp,
+    tierSize: nt ? nt.minXp - tier.minXp : 0,
   };
 }
 

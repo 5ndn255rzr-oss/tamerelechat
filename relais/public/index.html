@@ -309,47 +309,84 @@ function startMusic() {
   if (_music || !musicOn) return;
   try {
     const a = _ac();
-    const master = a.createGain();
-    master.gain.setValueAtTime(0.0001, a.currentTime);
-    master.gain.linearRampToValueAtTime(0.11, a.currentTime + 4); // fondu d'entrée
-    const filt = a.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = 850; filt.Q.value = 0.6;
-    filt.connect(master); master.connect(a.destination);
-    const lfo = a.createOscillator(), lfoGain = a.createGain();
-    lfo.frequency.value = 0.045; lfoGain.gain.value = 350; // ouverture/fermeture douce du filtre
-    lfo.connect(lfoGain); lfoGain.connect(filt.frequency); lfo.start();
-    const chords = [
-      [220.00, 277.18, 329.63, 440.00],
-      [174.61, 220.00, 261.63, 349.23],
-      [196.00, 246.94, 293.66, 392.00],
-      [261.63, 329.63, 392.00, 523.25],
-    ];
-    let idx = 0;
-    const playChord = (freqs) => {
-      const t = a.currentTime, dur = 9;
-      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.22, t + 3);
-      g.gain.linearRampToValueAtTime(0.0001, t + dur);
-      g.connect(filt);
-      freqs.forEach((f, i) => {
-        const o = a.createOscillator(); o.type = i === 0 ? "sine" : "triangle";
-        o.frequency.value = f; o.detune.value = Math.random() * 8 - 4;
-        o.connect(g); o.start(t); o.stop(t + dur + 0.1);
-      });
+    const comp = a.createDynamicsCompressor(); // évite le clipping des transitoires
+    const out = a.createGain();
+    out.gain.setValueAtTime(0.0001, a.currentTime);
+    out.gain.linearRampToValueAtTime(0.5, a.currentTime + 1);
+    out.connect(comp); comp.connect(a.destination);
+
+    // --- percussions & synthés (synthèse pure) ---
+    const noise = (t, dur) => {
+      const b = a.createBuffer(1, Math.max(1, (a.sampleRate * dur) | 0), a.sampleRate);
+      const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const s = a.createBufferSource(); s.buffer = b; s.start(t); s.stop(t + dur + 0.02); return s;
     };
-    playChord(chords[idx]);
-    const timer = setInterval(() => { idx = (idx + 1) % chords.length; playChord(chords[idx]); }, 8000);
-    _music = { master, lfo, timer };
+    const kick = (t) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.frequency.setValueAtTime(145, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(0.95, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.2);
+    };
+    const hat = (t, open) => {
+      const s = noise(t, open ? 0.07 : 0.03), f = a.createBiquadFilter(), g = a.createGain();
+      f.type = "highpass"; f.frequency.value = 8000;
+      g.gain.setValueAtTime(open ? 0.13 : 0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.07 : 0.03));
+      s.connect(f).connect(g).connect(out);
+    };
+    const snare = (t) => {
+      const s = noise(t, 0.13), f = a.createBiquadFilter(), g = a.createGain();
+      f.type = "highpass"; f.frequency.value = 1700;
+      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      s.connect(f).connect(g).connect(out);
+    };
+    const bass = (t, freq, dur) => {
+      const o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+      o.type = "sawtooth"; o.frequency.value = freq;
+      f.type = "lowpass"; f.frequency.value = 550; f.Q.value = 7;
+      g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.004, t + dur);
+      o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + dur + 0.02);
+    };
+    const lead = (t, freq) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = "square"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.1, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.17);
+    };
+
+    const BPM = 128, sixteenth = 15 / BPM; // 60/BPM/4 (double-croche)
+    const K = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]; // grosse caisse à chaque temps
+    const H = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,1]; // charley sur les contretemps
+    const S = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0]; // caisse claire sur 2 & 4
+    const barRoots = [55.00, 43.65, 65.41, 49.00];   // basses : Am F C G (une par mesure)
+    const arp = [220.00, 261.63, 329.63, 392.00, 440.00, 392.00, 329.63, 261.63];
+    let step = 0, arpI = 0, next = a.currentTime + 0.12;
+
+    const tick = () => {
+      if (!_music) return;
+      while (next < a.currentTime + 0.13) { // scheduler à anticipation
+        const s = step % 16, root = barRoots[(step / 16 | 0) % barRoots.length];
+        if (K[s]) kick(next);
+        if (H[s]) hat(next, s % 4 === 2);
+        if (S[s]) snare(next);
+        if (s % 4 === 0) bass(next, root, sixteenth * 3.5);          // basse à chaque temps
+        if (s % 2 === 0) { lead(next, arp[arpI % arp.length]); arpI++; } // arpège en croches
+        next += sixteenth; step++;
+      }
+      _music.timer = setTimeout(tick, 25);
+    };
+    _music = { out, timer: null };
+    tick();
   } catch (e) {}
 }
 function stopMusic() {
   if (!_music) return;
   try {
     const a = _ac(), t = a.currentTime;
-    clearInterval(_music.timer);
-    _music.master.gain.cancelScheduledValues(t);
-    _music.master.gain.setValueAtTime(_music.master.gain.value, t);
-    _music.master.gain.linearRampToValueAtTime(0.0001, t + 1.2);
-    try { _music.lfo.stop(t + 1.5); } catch (e) {}
+    clearTimeout(_music.timer);
+    _music.out.gain.cancelScheduledValues(t);
+    _music.out.gain.setValueAtTime(_music.out.gain.value, t);
+    _music.out.gain.linearRampToValueAtTime(0.0001, t + 0.5);
   } catch (e) {}
   _music = null;
 }
@@ -499,9 +536,10 @@ function applyMe(m) {
   $("tierBadge").textContent = m.tier;
   $("multTxt").textContent = "×" + m.mult;
   $("streakTxt").textContent = "série " + m.streak;
-  $("tierNext").textContent = m.nextTier ? `→ ${m.nextTier.name} (${m.nextTier.xpNeeded})` : "MAX 👑";
-  // progression d'XP dans le palier courant (approx visuelle)
-  const pct = m.nextTier ? Math.min(100, 100 - (m.nextTier.xpNeeded / (m.nextTier.xpNeeded + m.xp + 1)) * 100) : 100;
+  // Compteur clair "X/Y vers le rang suivant" qui monte à chaque passe réussie.
+  $("tierNext").textContent = m.nextTier
+    ? `→ ${m.nextTier.name} · ${m.tierXp ?? 0}/${m.tierSize ?? "?"}` : "RANG MAX 👑";
+  const pct = typeof m.tierProgress === "number" ? m.tierProgress : 100;
   $("xpFill").style.width = Math.max(4, pct) + "%";
   applyCosmetics();
 }
