@@ -20,7 +20,13 @@ import { loadSnapshot, saveSnapshot, persistenceEnabled } from "./persistence.js
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json());
-app.use(express.static(join(__dirname, "public")));
+app.use(express.static(join(__dirname, "public"), {
+  // Empêche le navigateur/WebView de garder une vieille page : le HTML est
+  // toujours revalidé, donc les mises à jour du jeu s'affichent tout de suite.
+  setHeaders(res, path) {
+    if (path.endsWith(".html")) res.setHeader("Cache-Control", "no-cache, must-revalidate");
+  },
+}));
 
 const PORT = process.env.PORT || 3001;
 
