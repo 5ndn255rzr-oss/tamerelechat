@@ -424,7 +424,7 @@ try { musicOn = localStorage.getItem("relais_music") !== "off"; } catch (e) {}
 let forceLevel = null;
 try {
   const p = new URLSearchParams(location.search).get("lvl");
-  if (p !== null && p !== "") { forceLevel = Math.max(0, Math.min(4, parseInt(p, 10) || 0)); musicLevel = forceLevel; }
+  if (p !== null && p !== "") { forceLevel = Math.max(0, Math.min(7, parseInt(p, 10) || 0)); musicLevel = forceLevel; }
 } catch (e) {}
 
 function startMusic() {
@@ -727,13 +727,16 @@ $("joinBtn").onclick = async () => {
   connectStream();
 };
 
-const TIER_ORDER = ["Bronze", "Argent", "Or", "Diamant", "Légende"];
+const TIER_ORDER = ["Bronze", "Argent", "Or", "Platine", "Diamant", "Maître", "Champion", "Légende"];
 const TIER_PREVIEW = [
-  { name: "Bronze", mult: 1, sweep: 1.0, zone: 0.30 },
-  { name: "Argent", mult: 2, sweep: 1.35, zone: 0.23 },
-  { name: "Or", mult: 5, sweep: 1.8, zone: 0.17 },
-  { name: "Diamant", mult: 12, sweep: 2.3, zone: 0.12 },
-  { name: "Légende", mult: 30, sweep: 3.1, zone: 0.08 },
+  { name: "Bronze",   mult: 1,  sweep: 0.55, zone: 0.40 },
+  { name: "Argent",   mult: 2,  sweep: 0.70, zone: 0.36 },
+  { name: "Or",       mult: 3,  sweep: 0.90, zone: 0.32 },
+  { name: "Platine",  mult: 5,  sweep: 1.10, zone: 0.28 },
+  { name: "Diamant",  mult: 8,  sweep: 1.30, zone: 0.24 },
+  { name: "Maître",   mult: 13, sweep: 1.55, zone: 0.20 },
+  { name: "Champion", mult: 20, sweep: 1.85, zone: 0.17 },
+  { name: "Légende",  mult: 30, sweep: 2.15, zone: 0.14 },
 ];
 let lastTier = null;
 function applyMe(m) {

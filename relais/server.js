@@ -33,12 +33,17 @@ const PORT = process.env.PORT || 3001;
 // --- Paliers de rang : seuil d'XP -> multiplicateur + difficulté --------------
 // `sweep` = vitesse de l'aiguille (× base) ; `zone` = largeur de la zone verte
 // (fraction de la barre). Le client s'en sert pour régler le défi d'adresse.
+// Difficulté volontairement douce (~÷3 par rapport à avant) : aiguille plus
+// lente + zone plus large. 8 rangs pour une progression longue.
 const TIERS = [
-  { name: "Bronze",  minXp: 0,    mult: 1,  sweep: 1.0, zone: 0.30 },
-  { name: "Argent",  minXp: 60,   mult: 2,  sweep: 1.35, zone: 0.23 },
-  { name: "Or",      minXp: 180,  mult: 5,  sweep: 1.8,  zone: 0.17 },
-  { name: "Diamant", minXp: 420,  mult: 12, sweep: 2.3,  zone: 0.12 },
-  { name: "Légende", minXp: 900,  mult: 30, sweep: 3.1,  zone: 0.08 },
+  { name: "Bronze",   minXp: 0,    mult: 1,  sweep: 0.55, zone: 0.40 },
+  { name: "Argent",   minXp: 15,   mult: 2,  sweep: 0.70, zone: 0.36 },
+  { name: "Or",       minXp: 35,   mult: 3,  sweep: 0.90, zone: 0.32 },
+  { name: "Platine",  minXp: 60,   mult: 5,  sweep: 1.10, zone: 0.28 },
+  { name: "Diamant",  minXp: 95,   mult: 8,  sweep: 1.30, zone: 0.24 },
+  { name: "Maître",   minXp: 140,  mult: 13, sweep: 1.55, zone: 0.20 },
+  { name: "Champion", minXp: 200,  mult: 20, sweep: 1.85, zone: 0.17 },
+  { name: "Légende",  minXp: 280,  mult: 30, sweep: 2.15, zone: 0.14 },
 ];
 
 function tierFor(xp) {
