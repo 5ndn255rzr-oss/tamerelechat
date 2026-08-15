@@ -36,14 +36,14 @@ const PORT = process.env.PORT || 3001;
 // Difficulté : départ nerveux (aiguille rapide dès Bronze) puis montée régulière
 // sur 8 rangs. Zone qui se resserre à chaque palier.
 const TIERS = [
-  { name: "Bronze",   minXp: 0,    mult: 1,  sweep: 0.95, zone: 0.33 },
-  { name: "Argent",   minXp: 15,   mult: 2,  sweep: 1.15, zone: 0.29 },
-  { name: "Or",       minXp: 35,   mult: 3,  sweep: 1.35, zone: 0.25 },
-  { name: "Platine",  minXp: 60,   mult: 5,  sweep: 1.55, zone: 0.22 },
-  { name: "Diamant",  minXp: 95,   mult: 8,  sweep: 1.80, zone: 0.19 },
-  { name: "Maître",   minXp: 140,  mult: 13, sweep: 2.05, zone: 0.16 },
-  { name: "Champion", minXp: 200,  mult: 20, sweep: 2.35, zone: 0.135 },
-  { name: "Légende",  minXp: 280,  mult: 30, sweep: 2.70, zone: 0.11 },
+  { name: "Bronze",   minXp: 0,    mult: 1,  sweep: 1.90, zone: 0.33 },
+  { name: "Argent",   minXp: 15,   mult: 2,  sweep: 2.30, zone: 0.29 },
+  { name: "Or",       minXp: 35,   mult: 3,  sweep: 2.70, zone: 0.25 },
+  { name: "Platine",  minXp: 60,   mult: 5,  sweep: 3.10, zone: 0.22 },
+  { name: "Diamant",  minXp: 95,   mult: 8,  sweep: 3.60, zone: 0.19 },
+  { name: "Maître",   minXp: 140,  mult: 13, sweep: 4.10, zone: 0.16 },
+  { name: "Champion", minXp: 200,  mult: 20, sweep: 4.70, zone: 0.135 },
+  { name: "Légende",  minXp: 280,  mult: 30, sweep: 5.40, zone: 0.11 },
 ];
 
 function tierFor(xp) {
