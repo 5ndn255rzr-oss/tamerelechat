@@ -801,6 +801,8 @@ function attempt() {
   const inZone = needlePos >= zoneStart && needlePos <= zoneStart + diff.zone;
   locked = true;
   setTimeout(() => (locked = false), 90); // anti double-tap, indépendant du réseau
+  // dès qu'on joue, on masque la consigne du haut (sinon le badge COMBO se superpose)
+  const _ab = $("arenaBig"); if (_ab && _ab.style.display !== "none") _ab.style.display = "none";
 
   if (inZone) {
     // --- feedback immédiat ---
