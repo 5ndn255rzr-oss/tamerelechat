@@ -33,17 +33,17 @@ const PORT = process.env.PORT || 3001;
 // --- Paliers de rang : seuil d'XP -> multiplicateur + difficulté --------------
 // `sweep` = vitesse de l'aiguille (× base) ; `zone` = largeur de la zone verte
 // (fraction de la barre). Le client s'en sert pour régler le défi d'adresse.
-// Difficulté volontairement douce (~÷3 par rapport à avant) : aiguille plus
-// lente + zone plus large. 8 rangs pour une progression longue.
+// Difficulté : départ nerveux (aiguille rapide dès Bronze) puis montée régulière
+// sur 8 rangs. Zone qui se resserre à chaque palier.
 const TIERS = [
-  { name: "Bronze",   minXp: 0,    mult: 1,  sweep: 0.55, zone: 0.40 },
-  { name: "Argent",   minXp: 15,   mult: 2,  sweep: 0.70, zone: 0.36 },
-  { name: "Or",       minXp: 35,   mult: 3,  sweep: 0.90, zone: 0.32 },
-  { name: "Platine",  minXp: 60,   mult: 5,  sweep: 1.10, zone: 0.28 },
-  { name: "Diamant",  minXp: 95,   mult: 8,  sweep: 1.30, zone: 0.24 },
-  { name: "Maître",   minXp: 140,  mult: 13, sweep: 1.55, zone: 0.20 },
-  { name: "Champion", minXp: 200,  mult: 20, sweep: 1.85, zone: 0.17 },
-  { name: "Légende",  minXp: 280,  mult: 30, sweep: 2.15, zone: 0.14 },
+  { name: "Bronze",   minXp: 0,    mult: 1,  sweep: 0.95, zone: 0.33 },
+  { name: "Argent",   minXp: 15,   mult: 2,  sweep: 1.15, zone: 0.29 },
+  { name: "Or",       minXp: 35,   mult: 3,  sweep: 1.35, zone: 0.25 },
+  { name: "Platine",  minXp: 60,   mult: 5,  sweep: 1.55, zone: 0.22 },
+  { name: "Diamant",  minXp: 95,   mult: 8,  sweep: 1.80, zone: 0.19 },
+  { name: "Maître",   minXp: 140,  mult: 13, sweep: 2.05, zone: 0.16 },
+  { name: "Champion", minXp: 200,  mult: 20, sweep: 2.35, zone: 0.135 },
+  { name: "Légende",  minXp: 280,  mult: 30, sweep: 2.70, zone: 0.11 },
 ];
 
 function tierFor(xp) {
@@ -146,20 +146,10 @@ const CITY_GEO = {
 };
 const regionOf = (city) => CITY_GEO[city]?.region || "—";
 
-// Rivaux de départ : la carte/les classements ne sont jamais vides.
-function seedRivals() {
-  const seed = [
-    ["Paris", 2300], ["Londres", 2100], ["New York", 1950], ["Tokyo", 1800],
-    ["Shanghai", 1700], ["Lyon", 1450], ["São Paulo", 1400], ["Mumbai", 1300],
-    ["Lagos", 1250], ["Marseille", 1150], ["Mexico", 1100], ["Séoul", 940],
-    ["Bruxelles", 950], ["Lille", 900], ["Istanbul", 880], ["Dakar", 820],
-    ["Toulouse", 780], ["Sydney", 760], ["Le Caire", 690], ["Bordeaux", 620],
-  ];
-  seed.forEach(([city, score], i) => {
-    if (!leagueOf.has(city)) leagueOf.set(city, Math.floor(i / LEAGUE_SIZE) + 1); // ligues initiales par rang de départ
-    bumpTerritory(city, CITY_GEO[city].country, score);
-  });
-}
+// Plus AUCUN rival fictif : les classements (villes, pays, continents, régions,
+// ligues) ne reflètent que des scores RÉELS de vrais joueurs. Vide au départ,
+// se remplit avec les vrais joueurs.
+function seedRivals() { /* volontairement vide : aucun score fictif */ }
 
 // --- SAISONS -----------------------------------------------------------------
 const SEASON_SEC = Number(process.env.SEASON_SEC || 7 * 24 * 3600); // 1 semaine par défaut
@@ -704,12 +694,11 @@ app.get("/api/tiers", (_req, res) => res.json(TIERS));
 app.get("/api/season", (_req, res) => res.json({ ...seasonInfo(), hallOfFame }));
 app.get("/health", (_req, res) => res.send("relais ok ✨"));
 
-// --- Monde vivant : des "bots" d'autres villes jouent en continu --------------
-// Illustre le pilier « le jeu tourne même sans toi » : la carte bouge toute
-// seule, les villes rivales grimpent, la chaîne progresse — sans jamais casser.
-// Villes rivales du monde entier : la carte s'anime sur tous les continents.
+// --- "Bots" d'autres villes (DÉSACTIVÉS par défaut) ---------------------------
+// Ils gonflaient les classements avec des scores fictifs -> coupés. On ne les
+// active que si RELAIS_BOTS=1 (jamais en prod). Tout ce qui s'affiche est réel.
 const BOT_CITIES = Object.keys(CITY_GEO);
-if (process.env.RELAIS_NO_BOTS !== "1") {
+if (process.env.RELAIS_BOTS === "1") {
   setInterval(() => {
     const city = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
     const country = CITY_GEO[city].country;

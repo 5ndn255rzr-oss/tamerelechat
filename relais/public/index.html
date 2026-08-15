@@ -729,14 +729,14 @@ $("joinBtn").onclick = async () => {
 
 const TIER_ORDER = ["Bronze", "Argent", "Or", "Platine", "Diamant", "Maître", "Champion", "Légende"];
 const TIER_PREVIEW = [
-  { name: "Bronze",   mult: 1,  sweep: 0.55, zone: 0.40 },
-  { name: "Argent",   mult: 2,  sweep: 0.70, zone: 0.36 },
-  { name: "Or",       mult: 3,  sweep: 0.90, zone: 0.32 },
-  { name: "Platine",  mult: 5,  sweep: 1.10, zone: 0.28 },
-  { name: "Diamant",  mult: 8,  sweep: 1.30, zone: 0.24 },
-  { name: "Maître",   mult: 13, sweep: 1.55, zone: 0.20 },
-  { name: "Champion", mult: 20, sweep: 1.85, zone: 0.17 },
-  { name: "Légende",  mult: 30, sweep: 2.15, zone: 0.14 },
+  { name: "Bronze",   mult: 1,  sweep: 0.95, zone: 0.33 },
+  { name: "Argent",   mult: 2,  sweep: 1.15, zone: 0.29 },
+  { name: "Or",       mult: 3,  sweep: 1.35, zone: 0.25 },
+  { name: "Platine",  mult: 5,  sweep: 1.55, zone: 0.22 },
+  { name: "Diamant",  mult: 8,  sweep: 1.80, zone: 0.19 },
+  { name: "Maître",   mult: 13, sweep: 2.05, zone: 0.16 },
+  { name: "Champion", mult: 20, sweep: 2.35, zone: 0.135 },
+  { name: "Légende",  mult: 30, sweep: 2.70, zone: 0.11 },
 ];
 let lastTier = null;
 function applyMe(m) {
@@ -847,7 +847,7 @@ function applyBan(body) {
 setInterval(() => {
   const el = $("banNote"), rb = $("reviveBtn"); if (!el) return;
   const left = Math.ceil((bannedUntil - Date.now()) / 1000);
-  if (left > 0) { el.style.display = "block"; el.textContent = `🟥 SUSPENDU ${left}s — sabotage détecté, tes ratés ne comptent plus`; if (rb) rb.style.display = "block"; }
+  if (left > 0) { el.style.display = "block"; el.textContent = `🟥 SUSPENDU ${left}s — sabotage détecté, tes ratés ne comptent plus`; if (rb) { rb.style.display = "block"; rb.textContent = inApp ? "📺 Regarder une pub pour reprendre" : "Reprendre maintenant"; } }
   else { el.style.display = "none"; if (rb) rb.style.display = "none"; }
 }, 250);
 
@@ -874,9 +874,11 @@ function fakeAd() { // pub simulée (navigateur uniquement)
   });
 }
 // Affiche une pub récompensée -> résout true si la récompense est gagnée.
+// Hors app native AdMob (navigateur / build sans pub) : déblocage DIRECT gratuit
+// (aucune pub, ni réelle ni simulée) -> version 100% gratuite, propre pour la review.
 function showRewardedAd(reason) {
   return new Promise((resolve) => {
-    if (!inApp) { fakeAd().then(() => resolve(true)); return; }
+    if (!inApp) { resolve(true); return; }
     let done = false;
     const finish = (ok) => { if (done) return; done = true; _adResolve = null; clearTimeout(to); resolve(ok); };
     const to = setTimeout(() => finish(false), 60000); // sécurité anti-blocage
@@ -933,7 +935,7 @@ function renderShop() {
       let btn;
       if (isEq) btn = `<button class="shopbtn eq" disabled>Équipé ✓</button>`;
       else if (isOwned) btn = `<button class="shopbtn own" data-eq="${type}:${it.id}">Équiper</button>`;
-      else btn = `<button class="shopbtn ad" data-ad="${type}:${it.id}">📺 Débloquer</button>`;
+      else btn = `<button class="shopbtn ad" data-ad="${type}:${it.id}">${inApp ? "📺 Débloquer" : "Débloquer"}</button>`;
       return `<div class="shopitem"><div class="si-l">${swatch}<span>${it.name}</span></div>${btn}</div>`;
     }).join("");
     return `<div class="shoph">${title}</div>${rows}`;
@@ -955,14 +957,14 @@ async function equipItem(type, id) {
 async function unlockItem(btn, type, id) {
   btn.disabled = true; btn.textContent = "…";
   const token = await watchAdForReward("unlock");
-  if (!token) { btn.disabled = false; btn.textContent = "📺 Débloquer"; return; }
+  if (!token) { btn.disabled = false; btn.textContent = inApp ? "📺 Débloquer" : "Débloquer"; return; }
   try {
     const r = await post("/api/unlock", { playerId, type, itemId: id, rewardToken: token });
     applyMe(r.me);
     shopData.owned = r.me.owned; shopData.equipped = r.me.equipped;
     if (type === "breaks") playBreak(id); // petit aperçu du son débloqué
     renderShop();
-  } catch (e) { btn.disabled = false; btn.textContent = "📺 Débloquer"; }
+  } catch (e) { btn.disabled = false; btn.textContent = inApp ? "📺 Débloquer" : "Débloquer"; }
 }
 
 // --- Partage (viralité) ---
