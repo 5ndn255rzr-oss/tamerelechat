@@ -511,7 +511,7 @@ function startMusic() {
     const barRoot = [55.00, 55.00, 43.65, 49.00];               // Am Am F G (808)
     const PENTA_HZ = [329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 784.00]; // E G A C D E G
     const HOOK = [0,2,3,2, 0,3,2,0, 4,3,2,0, 2,3,4,5];          // riff oriental accrocheur
-    const K  = [1,0,0,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];            // kick syncopé trap
+    const Kx = [0,0,0,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];            // kicks syncopés EN PLUS (hauts rangs)
     const SN = [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0];            // snare + clap sur le 3
     let step = 0, next = a.currentTime + 0.12;
 
@@ -520,10 +520,12 @@ function startMusic() {
     const tick = () => {
       if (!_music) return;
       const lvl = Math.min(4, (musicLevel | 0) + (musicBoost | 0));
-      const six = 15 / (138 + lvl * 4); // ~138-154 BPM (feel trap mi-temps)
+      const sweep = (diff && diff.sweep) ? diff.sweep : 1.9;     // vitesse de l'aiguille du rang courant
+      const six = 15 / (40 * sweep); // 1 temps = 1 passage d'aiguille (60/BPM), BPM = 40×sweep
       while (next < a.currentTime + 0.13) {
         const s = step % 16, bar = (step / 16 | 0) % 4, root = barRoot[bar];
-        if (K[s]) kick(next);
+        if (s % 4 === 0) kick(next);                             // kick à chaque temps = chaque passage d'aiguille
+        if (lvl >= 2 && Kx[s]) kick(next);                       // kicks syncopés trap aux hauts rangs
         if (SN[s]) { snare(next); clap(next); }
         if (s === 0) sub808(next, root, six * 14);               // 808 tenu par mesure
         if (lvl >= 2 && s === 6) sub808(next, root, six * 4);    // 808 syncopé
