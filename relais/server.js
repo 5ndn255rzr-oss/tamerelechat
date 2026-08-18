@@ -694,6 +694,42 @@ app.get("/api/tiers", (_req, res) => res.json(TIERS));
 app.get("/api/season", (_req, res) => res.json({ ...seasonInfo(), hallOfFame }));
 app.get("/health", (_req, res) => res.send("relais ok ✨"));
 
+// --- ADMIN : remise à zéro complète (protégée par un secret) ------------------
+// Repart d'une saison 1 toute neuve : tous les scores/territoires/chaîne à zéro,
+// panthéon vidé, chrono de saison relancé. Par défaut on efface AUSSI les comptes
+// joueurs (rangs/XP repartent à Bronze) ; passe ?keepAccounts=1 pour garder les
+// rangs et ne remettre à zéro que les points de la saison.
+//
+// Sécurité : ne marche QUE si la variable d'env ADMIN_KEY est définie sur Render
+// et fournie dans la requête (en-tête x-admin-key, ?key= ou {key} en JSON).
+function adminResetHandler(req, res) {
+  const key = (process.env.ADMIN_KEY || "").trim();
+  const given = (req.get("x-admin-key") || req.query.key || (req.body && req.body.key) || "").toString();
+  if (!key) return res.status(403).json({ error: "ADMIN_KEY non défini côté serveur" });
+  if (given !== key) return res.status(403).json({ error: "clé admin invalide" });
+
+  const keepAccounts = req.query.keepAccounts === "1" || (req.body && req.body.keepAccounts === true);
+
+  // Territoires + chaîne + ligues + panthéon -> zéro.
+  cities.clear(); countries.clear(); continents.clear(); leagueOf.clear();
+  chain.current = 0; chain.best = 0; chain.lastBreakBy = null; chain.lastBreakCity = null;
+  hallOfFame.length = 0;
+  players.clear(); // sessions live : les joueurs se ré-enregistrent à la prochaine action
+
+  // Les points de saison vivent dans `players` (déjà vidé). Garder les comptes
+  // suffit donc à conserver les rangs/XP ; sinon on efface tout.
+  if (!keepAccounts) accounts.clear(); // tout le monde repart de Bronze / 0
+
+  season = { number: 1, startedAt: Date.now() };
+  seedRivals();
+  saveSnapshot(buildSnapshot());
+  broadcastWorld();
+  console.log(`[admin] RESET complet — saison S1, compteurs à zéro (comptes ${keepAccounts ? "gardés" : "effacés"})`);
+  res.json({ ok: true, keptAccounts: keepAccounts, season: seasonInfo() });
+}
+app.post("/api/admin/reset", adminResetHandler);
+app.get("/api/admin/reset", adminResetHandler); // pratique depuis un navigateur
+
 // --- "Bots" d'autres villes (DÉSACTIVÉS par défaut) ---------------------------
 // Ils gonflaient les classements avec des scores fictifs -> coupés. On ne les
 // active que si RELAIS_BOTS=1 (jamais en prod). Tout ce qui s'affiche est réel.
