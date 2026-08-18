@@ -7,21 +7,34 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": {
-        "simulator": false
-      }
+      "ios": { "simulator": false }
     },
     "preview": {
       "distribution": "internal",
-      "ios": {
-        "simulator": false
-      }
+      "env": { "RELAIS_URL": "https://relais-server.onrender.com" },
+      "ios": { "simulator": false }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "RELAIS_URL": "https://relais-server.onrender.com",
+        "ADMOB_IOS_APP_ID": "ca-app-pub-2025971905620476~9839471736",
+        "ADMOB_REWARDED_IOS": "ca-app-pub-2025971905620476/2890920003",
+        "ADMOB_TEST_ADS": "0"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "rom.clavel@icloud.com",
+        "ascAppId": "6791576736",
+        "appleTeamId": "9S32X2PTHR"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-key.json",
+        "track": "internal"
+      }
+    }
   }
 }

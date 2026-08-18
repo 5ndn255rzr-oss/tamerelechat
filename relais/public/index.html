@@ -1,0 +1,1317 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>RELAIS ✨</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#12101a; --card:#1e1b2e; --line:#332e4a; --accent:#6c5ce7; --green:#27ae60; --gold:#f1c40f; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -10%, #241f3a, var(--bg));
+    color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center; min-height: 100%;
+    overflow-x: hidden; user-select: none;
+  }
+  .wrap { width: 100%; max-width: 460px; padding: 16px; }
+  h1 { font-size: 30px; font-weight: 900; letter-spacing: 1px; text-align: center; margin-bottom: 2px; }
+  h1 small { display:block; font-size:12px; font-weight:600; color:#9a92c0; letter-spacing:2px; margin-top:4px; }
+
+  /* --- Join --- */
+  #join { display:flex; flex-direction:column; gap:12px; margin-top:40px; }
+  input, select {
+    background: var(--card); color:#fff; border:1px solid var(--line);
+    border-radius:14px; padding:15px; font-size:17px; width:100%;
+  }
+  button.primary {
+    background: var(--accent); color:#fff; border:0; border-radius:16px;
+    padding:17px; font-size:18px; font-weight:800; width:100%; cursor:pointer;
+  }
+  button.primary:active { transform: scale(.98); }
+  .bannote { display:none; margin-top:10px; text-align:center; font-size:13px; font-weight:800; color:#fff;
+    background:linear-gradient(90deg,#e7405f,#ff7a1a); border-radius:12px; padding:9px; }
+  .revivebtn { width:100%; margin-top:8px; padding:13px; border:0; border-radius:14px; cursor:pointer;
+    font-size:15px; font-weight:800; color:#12101a; background:linear-gradient(135deg,#ffd54a,var(--gold)); }
+  .revivebtn:active { transform:translateY(1px); }
+  .actionrow { display:flex; gap:10px; margin-top:14px; }
+  .actbtn { flex:1; padding:13px; border:1px solid var(--line); border-radius:14px; cursor:pointer;
+    font-size:14px; font-weight:800; color:#fff; background:#221c3d; }
+  .actbtn:active { transform:translateY(1px); }
+  .modal { position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(6,4,14,.72); }
+  .modal.on { display:flex; }
+  .adbox { width:86%; max-width:340px; background:#0c0a16; border:1px solid var(--line); border-radius:20px; padding:30px; text-align:center; }
+  .adlabel { font-size:11px; letter-spacing:3px; color:#6f679a; }
+  .adcount { font-family:monospace; font-size:54px; font-weight:800; color:var(--gold); margin:8px 0; }
+  .adsub { font-size:13px; color:#9a92c0; }
+  .ghostbtn { background:#221c3d; color:#c9c2e8; border:1px solid var(--line); border-radius:14px;
+    padding:12px; font-size:14px; font-weight:700; width:100%; cursor:pointer; }
+  .ghostbtn:active { transform: scale(.98); }
+
+  /* --- Boutique --- */
+  .sheet { width:92%; max-width:400px; max-height:80vh; overflow-y:auto; background:#0c0a16;
+    border:1px solid var(--line); border-radius:22px; padding:20px; }
+  .sheet h2 { font-size:20px; margin-bottom:2px; }
+  .sheet .sub { font-size:12px; color:#9a92c0; margin-bottom:14px; }
+  .shoph { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#9a92c0; margin:16px 0 8px; }
+  .shopitem { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:10px 12px; margin-bottom:8px; }
+  .shopitem .si-l { display:flex; align-items:center; gap:10px; flex:1; font-size:14px; font-weight:600; }
+  .sw { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    box-shadow:0 0 10px rgba(255,255,255,.25); flex:none; }
+  .shopbtn { border:0; border-radius:10px; padding:9px 12px; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; }
+  .shopbtn.ad { background:linear-gradient(135deg,#ffd54a,var(--gold)); color:#12101a; }
+  .shopbtn.own { background:var(--accent); color:#fff; }
+  .shopbtn.eq { background:#2b2743; color:#6ee7a0; border:1px solid #27ae60; cursor:default; }
+  .shopbtn:active:not(:disabled) { transform:translateY(1px); }
+  .closebtn { width:100%; margin-top:16px; padding:13px; border:1px solid var(--line); border-radius:14px;
+    background:#221c3d; color:#c9c2e8; font-size:15px; font-weight:800; cursor:pointer; }
+  .musicbtn { position:fixed; top:10px; right:10px; z-index:30; width:42px; height:42px; border-radius:50%;
+    border:1px solid var(--line); background:rgba(30,27,46,.92); color:#fff; font-size:18px; cursor:pointer;
+    display:none; align-items:center; justify-content:center; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+  .musicbtn:active { transform:scale(.94); }
+
+  /* --- Montée de palier (spectaculaire) --- */
+  .tierup { position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; pointer-events:none; overflow:hidden; }
+  .tu-flash { position:absolute; inset:0; background:radial-gradient(circle at 50% 46%, rgba(255,213,74,.6), rgba(255,213,74,0) 62%); animation: tuFlash 1s ease-out forwards; }
+  @keyframes tuFlash { 0%{opacity:0} 10%{opacity:1} 100%{opacity:0} }
+  .tu-ring { position:absolute; left:50%; top:46%; width:24px; height:24px; border-radius:50%;
+    border:4px solid var(--gold); transform:translate(-50%,-50%); animation: tuRing 1s ease-out forwards; }
+  .tu-ring.r2 { border-color:#a99bff; animation-delay:.12s; }
+  @keyframes tuRing { 0%{opacity:.9; width:24px; height:24px} 100%{opacity:0; width:560px; height:560px} }
+  .tierup-in { text-align:center; position:relative; animation: tierPop 2.4s cubic-bezier(.2,.9,.3,1) forwards; }
+  .tierup-sub { font-size:14px; letter-spacing:6px; color:var(--gold); font-weight:900; margin-bottom:6px; text-shadow:0 0 12px rgba(241,196,15,.7); }
+  .tierup-name { font-size:60px; font-weight:900; color:#fff; letter-spacing:1px; text-shadow:0 0 40px rgba(241,196,15,.95), 0 0 8px #fff; }
+  .tierup-crown { font-size:40px; margin-top:2px; animation: crownBounce 2.4s ease-out forwards; }
+  @keyframes tierPop { 0%{opacity:0; transform:scale(.3)} 10%{opacity:1; transform:scale(1.25)} 22%{transform:scale(.96)} 30%{transform:scale(1.05)} 40%{transform:scale(1)} 82%{opacity:1} 100%{opacity:0; transform:scale(1.08)} }
+  @keyframes crownBounce { 0%,12%{transform:translateY(-14px) scale(.5); opacity:0} 26%{transform:translateY(0) scale(1.3); opacity:1} 40%{transform:scale(1)} 100%{opacity:1} }
+  .tsPark { position:absolute; left:50%; top:48%; border-radius:50%; color:#ffd54a;
+    box-shadow:0 0 12px currentColor; animation: tSparkFly 1.5s cubic-bezier(.15,.6,.4,1) forwards; }
+  @keyframes tSparkFly { 0%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+    75%{opacity:1} 100%{opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.2)} }
+  .shakeBig { animation: shakeBig .6s ease-in-out; }
+  @keyframes shakeBig { 0%,100%{transform:translateX(0)} 12%{transform:translate(-7px,3px)} 26%{transform:translate(8px,-4px)} 40%{transform:translate(-9px,2px)} 55%{transform:translate(7px,-3px)} 70%{transform:translate(-4px,2px)} 85%{transform:translate(3px,-1px)} }
+
+  /* --- HUD --- */
+  #game { display:none; }
+  .chainbox { text-align:center; margin: 6px 0 14px; }
+  .chainlabel { font-size:12px; letter-spacing:2px; color:#9a92c0; text-transform:uppercase; }
+  .chainval { font-size:52px; font-weight:900; line-height:1; color: var(--gold); text-shadow:0 0 24px rgba(241,196,15,.35); }
+  .chainsub { font-size:12px; color:#8a83ad; margin-top:4px; min-height:15px; }
+
+  .rankrow { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:12px 14px; margin-bottom:14px; }
+  .badge { font-size:13px; font-weight:900; padding:5px 10px; border-radius:999px; background:#2b2743; border:1px solid var(--line); }
+  .mult { margin-left:auto; font-weight:900; font-size:18px; color:var(--gold); }
+  .xpbar { height:7px; background:#2b2743; border-radius:999px; overflow:hidden; margin-top:2px; }
+  .xpfill { height:100%; background:linear-gradient(90deg,var(--accent),#a29bfe); width:0%; transition:width .25s; }
+  .rankmeta { flex:1; }
+  .rankmeta .top { display:flex; justify-content:space-between; font-size:12px; color:#9a92c0; margin-bottom:5px; }
+
+  /* --- Skill bar --- */
+  #arena { position:relative; height:200px; border-radius:20px; background:var(--card);
+    border:1px solid var(--line); margin-bottom:8px; overflow:hidden; cursor:pointer;
+    touch-action: manipulation; } /* supprime l'attente double-tap-zoom (latence tactile) */
+  #arena.hit { animation: pop .18s; }
+  #arena.miss { animation: shake .3s; }
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.015)} 100%{transform:scale(1)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  .track { position:absolute; top:50%; left:5%; right:5%; height:26px; transform:translateY(-50%);
+    background:#151226; border-radius:999px; border:1px solid var(--line); }
+  .zone { position:absolute; top:0; bottom:0; background:linear-gradient(180deg,#2ecc71,#27ae60);
+    border-radius:999px; box-shadow:0 0 18px rgba(46,204,113,.5); }
+  .needle { position:absolute; top:-9px; bottom:-9px; width:5px; background:#fff; border-radius:3px;
+    box-shadow:0 0 12px #fff; transform:translateX(-2.5px); }
+  .arena-hint { position:absolute; bottom:12px; width:100%; text-align:center; font-size:13px; color:#8a83ad; }
+  .arena-big { position:absolute; top:18px; width:100%; text-align:center; font-size:15px; font-weight:800; color:#fff; }
+  .float { position:absolute; font-weight:900; font-size:22px; pointer-events:none; animation: floatUp .8s ease-out forwards; }
+  @keyframes floatUp { from{opacity:1; transform:translateY(0)} to{opacity:0; transform:translateY(-46px)} }
+  .combo { position:absolute; top:8px; left:50%; transform:translateX(-50%); z-index:6;
+    font-weight:900; letter-spacing:1px; color:var(--gold); opacity:0; transition:opacity .15s;
+    pointer-events:none; white-space:nowrap; }
+  .combo.on { opacity:1; }
+  .combo.pulse { animation: comboPulse .18s ease-out; }
+  @keyframes comboPulse { 0%{transform:translateX(-50%) scale(1)} 45%{transform:translateX(-50%) scale(1.28)} 100%{transform:translateX(-50%) scale(1)} }
+  .comboShake { animation: comboShake .16s ease-in-out; }
+  @keyframes comboShake { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-3px,1px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,1px)} }
+
+  /* --- Fond animé permanent (jamais de vide) --- */
+  .ambient { position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden; }
+  .ambient::before, .ambient::after { content:""; position:absolute; width:65vmax; height:65vmax;
+    border-radius:50%; filter:blur(70px); opacity:.20; }
+  .ambient::before { background:radial-gradient(circle,#6c5ce7,transparent 70%); top:-22%; left:-12%; animation: drift1 19s ease-in-out infinite; }
+  .ambient::after { background:radial-gradient(circle,#e7405f,transparent 70%); bottom:-22%; right:-12%; animation: drift2 23s ease-in-out infinite; }
+  @keyframes drift1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(22%,16%) scale(1.15)} }
+  @keyframes drift2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-16%,-13%) scale(1.1)} }
+
+  /* --- Particules d'impact (passe réussie) --- */
+  .hitpx { position:absolute; border-radius:50%; pointer-events:none; box-shadow:0 0 8px currentColor;
+    animation: hitpx .6s ease-out forwards; }
+  @keyframes hitpx { 0%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+    100%{opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.25)} }
+  .chainval.pop { animation: chainPop .22s ease-out; }
+  @keyframes chainPop { 0%{transform:scale(1)} 40%{transform:scale(1.18)} 100%{transform:scale(1)} }
+
+  /* --- Cassure : flash rouge + éclats + compteur qui se brise --- */
+  .breakfx { position:fixed; inset:0; z-index:48; pointer-events:none; overflow:hidden; }
+  .bf-flash { position:absolute; inset:0; background:radial-gradient(circle at 50% 45%, rgba(231,76,60,.5), rgba(231,76,60,0) 60%); animation: bfFlash .5s ease-out forwards; }
+  @keyframes bfFlash { 0%{opacity:0} 12%{opacity:1} 100%{opacity:0} }
+  .bshard { position:absolute; left:50%; top:46%; border-radius:2px; box-shadow:0 0 8px currentColor;
+    animation: bshard .7s cubic-bezier(.2,.7,.4,1) forwards; }
+  @keyframes bshard { 0%{opacity:1; transform:translate(-50%,-50%) rotate(0)}
+    100%{opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(200deg) scale(.4)} }
+  .chainval.broke { animation: chainBroke .5s ease-out; }
+  @keyframes chainBroke { 0%{color:#e74c3c; transform:scale(1.25)} 35%{transform:scale(.88) translateX(-5px)} 60%{transform:translateX(5px)} 100%{transform:scale(1)} }
+
+  /* --- Lumières latérales (fête foraine / casino) --- */
+  .sidelights { position:fixed; top:0; bottom:0; width:24px; z-index:3; pointer-events:none;
+    display:flex; flex-direction:column; justify-content:space-around; align-items:center; padding:10px 0;
+    animation: hueSpin 9s linear infinite; }
+  .sidelights.left { left:0; } .sidelights.right { right:0; }
+  @keyframes hueSpin { to { filter:hue-rotate(360deg); } }
+  .bulb { width:11px; height:11px; border-radius:50%; box-shadow:0 0 12px currentColor; animation: bulbBlink 1s infinite; }
+  @keyframes bulbBlink { 0%,100%{opacity:.18; transform:scale(.6)} 50%{opacity:1; transform:scale(1.25)} }
+  body.frenzy .sidelights { animation-duration:2.4s; width:30px; }
+  body.frenzy .bulb { animation-duration:.32s; box-shadow:0 0 20px currentColor; }
+
+  /* --- Avertissement épilepsie --- */
+  .epimodal { position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:rgba(6,4,14,.92); }
+  .epimodal.hide { display:none; }
+  .epibox { width:88%; max-width:360px; background:#0c0a16; border:1px solid var(--line); border-radius:20px; padding:26px 22px; text-align:center; }
+  .epiicon { font-size:42px; }
+  .epititle { font-weight:900; font-size:18px; margin:6px 0 10px; color:var(--gold); }
+  .epibox p { font-size:14px; color:#c9c2e8; line-height:1.55; margin-bottom:18px; }
+
+  /* --- Curseur : emoji + arc-en-ciel --- */
+  .needle-emo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:46px; line-height:1; pointer-events:none; filter:drop-shadow(0 0 7px rgba(0,0,0,.65)); z-index:4; }
+  .needle.rainbow { animation: needleRainbow 1.3s linear infinite; }
+  @keyframes needleRainbow { to { filter:hue-rotate(360deg); } }
+
+  /* --- Événements festifs aléatoires (pop) --- */
+  .popfx { position:fixed; z-index:47; pointer-events:none; }
+  .popShard { position:absolute; left:0; top:0; border-radius:50%; box-shadow:0 0 10px currentColor; animation: popShard .9s ease-out forwards; }
+  @keyframes popShard { 0%{opacity:1; transform:translate(-50%,-50%) scale(1)} 100%{opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3)} }
+  .starfall { position:fixed; top:-6%; z-index:47; pointer-events:none; will-change:transform; animation: starfall linear forwards; }
+  @keyframes starfall { 0%{opacity:0; transform:translateY(0) rotate(0)} 12%{opacity:1} 100%{opacity:0; transform:translateY(112vh) rotate(360deg)} }
+  .rainbowsweep { position:fixed; inset:0; z-index:46; pointer-events:none;
+    background:linear-gradient(60deg, transparent 28%, rgba(255,0,0,.16),rgba(255,165,0,.16),rgba(255,255,0,.16),rgba(0,200,0,.16),rgba(0,120,255,.16),rgba(148,0,211,.16), transparent 72%);
+    background-size:260% 100%; animation: rainbowsweep 1.1s ease-out forwards; }
+  @keyframes rainbowsweep { from{background-position:130% 0} to{background-position:-130% 0} }
+  .popbanner { position:fixed; top:38%; left:50%; z-index:49; pointer-events:none;
+    font-size:32px; font-weight:900; color:#fff; text-shadow:0 0 24px var(--gold); white-space:nowrap; animation: popbanner 1.3s ease-out forwards; }
+  @keyframes popbanner { 0%{opacity:0; transform:translate(-50%,-50%) scale(.5)} 20%{opacity:1; transform:translate(-50%,-50%) scale(1.15)} 35%{transform:translate(-50%,-50%) scale(1)} 80%{opacity:1} 100%{opacity:0; transform:translate(-50%,-50%) scale(1.1)} }
+
+  /* --- Leaderboards --- */
+  .boards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .board { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:12px; }
+  .board h3 { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#9a92c0; margin-bottom:8px; }
+  .row { display:flex; font-size:13px; padding:4px 0; border-bottom:1px solid #262138; }
+  .row:last-child { border-bottom:0; }
+  .row .n { width:18px; color:#8a83ad; }
+  .row .nm { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .sc { color:var(--gold); font-weight:800; }
+  .row.mine { color:#fff; }
+  .row.mine .nm { color:#a29bfe; font-weight:800; }
+  .online { text-align:center; font-size:12px; color:#8a83ad; margin-top:14px; }
+  .leaguecard { margin-top:14px; background:linear-gradient(180deg,#241f38,var(--card)); border:1px solid var(--line);
+    border-radius:16px; padding:13px 14px; }
+  .leaguecard .lhead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .leaguecard .lname { font-weight:800; font-size:15px; }
+  .leaguecard .pill { margin-left:auto; font-size:11px; font-weight:800; padding:4px 9px; border-radius:999px; }
+  .pill.promo { background:rgba(39,174,96,.2); color:#4ee08a; border:1px solid #27ae60; }
+  .pill.releg { background:rgba(231,76,109,.2); color:#ff8098; border:1px solid #e7405f; }
+  .pill.safe { background:#2b2743; color:#9a92c0; border:1px solid var(--line); }
+  .lrow { display:flex; font-size:13px; padding:3px 0; }
+  .lrow .lp { width:22px; color:#8a83ad; font-family:monospace; }
+  .lrow.meCity { color:#fff; font-weight:800; } .lrow.meCity .nm { color:#a99bff; }
+  .lrow .sc { margin-left:auto; color:var(--gold); font-family:monospace; }
+  .mapwrap { margin-top:16px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:13px; }
+  .mapwrap h3 { margin:0 0 8px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#9a92c0; }
+  .map { position:relative; width:100%; aspect-ratio:2/1; }
+  .map canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .dot { position:absolute; transform:translate(-50%,-50%); border-radius:50%; background:#a99bff;
+    box-shadow:0 0 8px rgba(169,155,255,.6); transition:all .4s ease; }
+  .dot.lead { background:var(--gold); box-shadow:0 0 16px rgba(241,196,15,.9); animation:throb 1.4s infinite; z-index:3; }
+  .dot.me { outline:2px solid #fff; outline-offset:1px; }
+  @keyframes throb { 50% { transform:translate(-50%,-50%) scale(1.35); } }
+  .dlabel { position:absolute; transform:translate(-50%,-50%); font-size:9.5px; color:#fff;
+    white-space:nowrap; text-shadow:0 1px 3px #000; pointer-events:none; }
+</style>
+</head>
+<body>
+<div class="ambient" aria-hidden="true"></div>
+<div class="sidelights left" id="lightsL" aria-hidden="true"></div>
+<div class="sidelights right" id="lightsR" aria-hidden="true"></div>
+
+<!-- Avertissement photosensibilité (affiché une fois) -->
+<div class="epimodal" id="epiModal">
+  <div class="epibox">
+    <div class="epiicon">⚠️</div>
+    <div class="epititle">Avertissement photosensibilité</div>
+    <p>RELAIS contient des <b>flashs lumineux</b> et des <b>effets clignotants rapides</b> (style fête foraine). Déconseillé aux personnes épileptiques photosensibles.</p>
+    <button class="primary" id="epiOk">J'ai compris — jouer</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <h1>RELAIS ✨<small>NE LÂCHE PAS LA CHAÎNE</small></h1>
+  <button id="musicBtn" class="musicbtn" title="Musique">🔊</button>
+
+  <!-- Écran d'entrée -->
+  <div id="join">
+    <input id="name" placeholder="Ton blaze" maxlength="20" />
+    <select id="city"></select>
+    <button class="ghostbtn" id="gpsBtn">📍 Utiliser ma position</button>
+    <div id="gpsNote" style="font-size:12px;color:#8a83ad;text-align:center;min-height:16px"></div>
+    <button class="primary" id="joinBtn">Entrer dans la chaîne</button>
+  </div>
+
+  <!-- Jeu -->
+  <div id="game">
+    <div id="seasonLine" style="text-align:center;font-size:12px;color:#9a92c0;margin-bottom:6px"></div>
+    <div class="chainbox">
+      <div class="chainlabel">Chaîne mondiale</div>
+      <div class="chainval" id="chainVal">0</div>
+      <div class="chainsub" id="chainSub">record : 0</div>
+    </div>
+
+    <div class="rankrow">
+      <span class="badge" id="tierBadge">Bronze</span>
+      <div class="rankmeta">
+        <div class="top"><span id="tierNext">→ Argent</span><span id="streakTxt">série 0</span></div>
+        <div class="xpbar"><div class="xpfill" id="xpFill"></div></div>
+      </div>
+      <span class="mult" id="multTxt">×1</span>
+    </div>
+
+    <div id="arena">
+      <div class="arena-big" id="arenaBig">Tape quand le trait passe dans le vert</div>
+      <div class="combo" id="comboBadge"></div>
+      <div class="track" id="track">
+        <div class="zone" id="zone"></div>
+        <div class="needle" id="needle"></div>
+      </div>
+      <div class="arena-hint">clic / espace / touch — plus ton rang monte, plus c'est serré</div>
+    </div>
+    <div id="banNote" class="bannote"></div>
+    <button id="reviveBtn" class="revivebtn" style="display:none">📺 Regarder une pub pour reprendre</button>
+
+    <div id="leagueCard" class="leaguecard"></div>
+
+    <div class="boards">
+      <div class="board">
+        <h3>🏙️ Villes</h3>
+        <div id="cityBoard"></div>
+      </div>
+      <div class="board">
+        <h3>🌍 Pays</h3>
+        <div id="countryBoard"></div>
+      </div>
+    </div>
+    <div class="board" style="margin-top:12px">
+      <h3>🌐 Continents</h3>
+      <div id="contBoard"></div>
+    </div>
+    <div id="zoomCard" class="leaguecard"></div>
+    <div class="mapwrap">
+      <h3>🗺️ Carte de conquête — le monde</h3>
+      <div class="map" id="map">
+        <canvas id="worldCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="actionrow">
+      <button id="shopBtn" class="actbtn">🛍️ Boutique</button>
+      <button id="shareBtn" class="actbtn">🔥 Défie tes potes</button>
+    </div>
+    <div class="online" id="online"></div>
+    <div style="text-align:center;margin-top:12px">
+      <a href="/privacy.html" style="color:#6f679a;font-size:12px">Politique de confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<!-- Fausse pub (utilisée uniquement en navigateur ; dans l'app = vraie pub AdMob) -->
+<div class="modal" id="adModal">
+  <div class="adbox"><div class="adlabel">PUBLICITÉ</div><div class="adcount" id="adCount">5</div><div class="adsub">récompense dans quelques secondes…</div></div>
+</div>
+
+<!-- Boutique : tout se débloque en regardant une pub (rien de payant) -->
+<div class="modal" id="shopModal">
+  <div class="sheet">
+    <h2>🛍️ Boutique</h2>
+    <div class="sub">Tout est gratuit : regarde une courte pub pour débloquer. Apparence et son uniquement — aucun avantage en jeu.</div>
+    <div id="shopBody"></div>
+    <button class="closebtn" id="shopClose">Fermer</button>
+  </div>
+</div>
+
+<script>
+const API = ""; // même origine
+let playerId = null;
+let me = null;
+let diff = { sweep: 1, zone: 0.30 };
+const BASE_POINTS = 10; // doit refléter server.js — juste pour l'affichage optimiste
+
+// Sons de BRIS (la chaîne casse) — synthèse Web Audio, 4 variantes (cosmétique).
+let _actx;
+function _ac() {
+  if (!_actx) {
+    _actx = new (window.AudioContext || window.webkitAudioContext)();
+    // Déblocage audio Safari/iOS : jouer un buffer muet dans le geste utilisateur.
+    try { const b = _actx.createBuffer(1, 1, 22050); const s = _actx.createBufferSource(); s.buffer = b; s.connect(_actx.destination); s.start(0); } catch (e) {}
+  }
+  if (_actx.state === "suspended") { try { _actx.resume(); } catch (e) {} }
+  return _actx;
+}
+function _noise(a, t, dur, hpF, lpF, vol) {
+  const buf = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate);
+  const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(); src.buffer = buf; let n = src;
+  if (hpF) { const f = a.createBiquadFilter(); f.type = "highpass"; f.frequency.value = hpF; n.connect(f); n = f; }
+  if (lpF) { const f = a.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = lpF; n.connect(f); n = f; }
+  const g = a.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  n.connect(g).connect(a.destination); src.start(t); src.stop(t + dur);
+}
+function _tone(a, t, type, f0, f1, dur, vol) {
+  const o = a.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t);
+  if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = a.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+function playBreak(kind) {
+  kind = kind || (me && me.equipped && me.equipped.break) || "glass";
+  try {
+    const a = _ac(), t = a.currentTime;
+    if (kind === "chain") { _tone(a, t, "square", 90, 45, 0.18, 0.3); [180,250,330,470].forEach((f,i)=>_tone(a,t+i*0.03,"triangle",f,f*0.6,0.14,0.18)); _noise(a,t,0.12,2500,0,0.3); }
+    else if (kind === "thunder") { _noise(a,t,0.85,0,380,0.9); _tone(a,t,"sine",85,28,0.7,0.55); _noise(a,t,0.08,1800,0,0.4); }
+    else if (kind === "crystal") { [2100,2650,3300,4200,5200].forEach((f,i)=>_tone(a,t+i*0.015,"sine",f,null,0.6-i*0.05,0.13)); _noise(a,t,0.12,3000,0,0.25); }
+    else { _noise(a,t,0.5,1100,0,0.9); _tone(a,t,"sawtooth",320,55,0.22,0.35); for (let k=0;k<4;k++) _tone(a,t+0.02+Math.random()*0.14,"triangle",1500+Math.random()*2600,null,0.12,0.12); }
+  } catch (e) {}
+}
+
+// Son de RÉUSSITE (tap dans le vert) — "pluck" clair qui MONTE avec le combo :
+// grimpe une gamme pentatonique octave après octave, plus fort et plus pétillant
+// à mesure que la série s'allonge.
+let hitStreak = 0;
+const PENTA = [0, 2, 4, 7, 9]; // demi-tons (penta majeure)
+function playHit(combo) {
+  try {
+    const a = _ac(), t = a.currentTime;
+    const lvl = Math.min(24, combo || 0);
+    const semis = PENTA[lvl % 5] + 12 * Math.floor(lvl / 5); // monte d'octave en octave
+    const f = 523.25 * Math.pow(2, semis / 12);
+    const vol = 0.2 + Math.min(0.18, lvl * 0.012); // un peu plus fort avec le combo
+    _tone(a, t, "sine", f, f, 0.13, vol);
+    _tone(a, t, "triangle", f * 1.5, f * 1.5, 0.10, vol * 0.5);   // quinte
+    _tone(a, t + 0.004, "sine", f * 2, f * 2, 0.06, vol * 0.28);  // octave
+    if (lvl >= 6) _tone(a, t + 0.01, "square", f * 3, f * 3, 0.05, 0.045); // étincelle aiguë
+  } catch (e) {}
+}
+
+// --- Musique dynamique (synthétisée, sans fichier ni copyright) ---------------
+// Prod entraînante (progression Am-F-C-G + mélodie) qui GAGNE DES COUCHES et
+// ACCÉLÈRE à chaque palier : plus ton rang monte, plus ça envoie.
+// musicLevel = index du rang (0 Bronze … 4 Légende), lu en direct par le séquenceur.
+let _music = null;
+let musicOn = true;
+let musicLevel = 0;
+let musicBoost = 0; // +1 temporaire lors des événements festifs (fait "évoluer" la prod)
+let _boostT = null;
+try { musicOn = localStorage.getItem("relais_music") !== "off"; } catch (e) {}
+
+// Aperçu : ?lvl=0..4 dans l'URL force le niveau (musique + intensité) pour tester un rang.
+let forceLevel = null;
+try {
+  const p = new URLSearchParams(location.search).get("lvl");
+  if (p !== null && p !== "") { forceLevel = Math.max(0, Math.min(7, parseInt(p, 10) || 0)); musicLevel = forceLevel; }
+} catch (e) {}
+
+function startMusic() {
+  if (_music || !musicOn) return;
+  try {
+    const a = _ac();
+    const comp = a.createDynamicsCompressor(); // doux, pour ne pas "pomper" tout le mix
+    comp.threshold.value = -14; comp.knee.value = 20; comp.ratio.value = 3; comp.attack.value = 0.006; comp.release.value = 0.18;
+    const out = a.createGain();
+    out.gain.setValueAtTime(0.0001, a.currentTime);
+    out.gain.linearRampToValueAtTime(0.62, a.currentTime + 1);
+    out.connect(comp); comp.connect(a.destination);
+
+    // --- percussions & synthés (synthèse pure) ---
+    const noise = (t, dur) => {
+      const b = a.createBuffer(1, Math.max(1, (a.sampleRate * dur) | 0), a.sampleRate);
+      const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const s = a.createBufferSource(); s.buffer = b; s.start(t); s.stop(t + dur + 0.02); return s;
+    };
+    const kick = (t) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.frequency.setValueAtTime(145, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(0.95, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.2);
+    };
+    const hat = (t, open) => {
+      const s = noise(t, open ? 0.07 : 0.03), f = a.createBiquadFilter(), g = a.createGain();
+      f.type = "highpass"; f.frequency.value = 8000;
+      g.gain.setValueAtTime(open ? 0.13 : 0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.07 : 0.03));
+      s.connect(f).connect(g).connect(out);
+    };
+    const snare = (t) => {
+      const s = noise(t, 0.13), f = a.createBiquadFilter(), g = a.createGain();
+      f.type = "highpass"; f.frequency.value = 1700;
+      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      s.connect(f).connect(g).connect(out);
+    };
+    const bass = (t, freq, dur) => {
+      const o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+      o.type = "sawtooth"; o.frequency.value = freq;
+      f.type = "lowpass"; f.frequency.value = 550; f.Q.value = 7;
+      g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.004, t + dur);
+      o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + dur + 0.02);
+    };
+    const lead = (t, freq, v) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = "square"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v || 0.13, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.16);
+    };
+    const clap = (t) => {
+      for (let i = 0; i < 3; i++) {
+        const s = noise(t + i * 0.008, 0.05), f = a.createBiquadFilter(), g = a.createGain();
+        f.type = "bandpass"; f.frequency.value = 2000;
+        g.gain.setValueAtTime(0.16, t + i * 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.008 + 0.05);
+        s.connect(f).connect(g).connect(out);
+      }
+    };
+    const stab = (t, freqs) => freqs.forEach((fr) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth"; o.frequency.value = fr;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.24);
+    });
+
+    // 808 sub-bass (trap) : sinus profond + harmonique audible sur petits HP.
+    const sub808 = (t, freq, dur) => {
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.006, t + dur);
+      g.connect(out);
+      const o = a.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(freq * 1.5, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
+      o.connect(g); o.start(t); o.stop(t + dur + 0.02);
+      // harmonique 1-2 octaves au-dessus -> reste audible sur HP d'ordi/téléphone
+      const o2 = a.createOscillator(); o2.type = "triangle";
+      o2.frequency.setValueAtTime(freq * 3, t); o2.frequency.exponentialRampToValueAtTime(freq * 2, t + 0.06);
+      const g2 = a.createGain(); g2.gain.setValueAtTime(0.09, t); g2.gain.exponentialRampToValueAtTime(0.004, t + Math.min(dur, 0.45));
+      o2.connect(g2).connect(out); o2.start(t); o2.stop(t + Math.min(dur, 0.55) + 0.02);
+    };
+
+    // --- Beat TRAP + mélodie ORIENTALE pentatonique (style meme rap chinois) ---
+    const barRoot = [55.00, 55.00, 43.65, 49.00];               // Am Am F G (808)
+    const PENTA_HZ = [329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 784.00]; // E G A C D E G
+    const HOOK = [0,2,3,2, 0,3,2,0, 4,3,2,0, 2,3,4,5];          // riff oriental accrocheur
+    const Kx = [0,0,0,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];            // kicks syncopés EN PLUS (hauts rangs)
+    const SN = [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0];            // snare + clap sur le 3
+    let step = 0, next = a.currentTime + 0.12;
+
+    // Séquenceur à anticipation : lit musicLevel EN DIRECT -> plus le rang monte,
+    // plus il y a de rolls de charley et la mélodie se densifie (sans coupure).
+    const tick = () => {
+      if (!_music) return;
+      const lvl = Math.min(4, (musicLevel | 0) + (musicBoost | 0));
+      const sweep = (diff && diff.sweep) ? diff.sweep : 1.9;     // vitesse de l'aiguille du rang courant
+      const six = 15 / (40 * sweep); // 1 temps = 1 passage d'aiguille (60/BPM), BPM = 40×sweep
+      while (next < a.currentTime + 0.13) {
+        const s = step % 16, bar = (step / 16 | 0) % 4, root = barRoot[bar];
+        if (s % 4 === 0) kick(next);                             // kick à chaque temps = chaque passage d'aiguille
+        if (lvl >= 2 && Kx[s]) kick(next);                       // kicks syncopés trap aux hauts rangs
+        if (SN[s]) { snare(next); clap(next); }
+        if (s === 0) sub808(next, root, six * 14);               // 808 tenu par mesure
+        if (lvl >= 2 && s === 6) sub808(next, root, six * 4);    // 808 syncopé
+        hat(next, false);                                        // charley en doubles-croches
+        if (s === 15) { hat(next + six / 3, false); hat(next + six * 2 / 3, false); } // roll de fin
+        if (lvl >= 3 && (s === 7 || s === 11)) hat(next + six / 2, false);            // hats en plus
+        const playLead = lvl >= 4 ? true : (s % 2 === 0);        // croches, doubles-croches au max
+        if (playLead) { const n = PENTA_HZ[HOOK[s]]; lead(next, n); if (lvl >= 2) lead(next, n * 2, 0.045); }
+        next += six; step++;
+      }
+      _music.timer = setTimeout(tick, 25);
+    };
+    _music = { out, timer: null };
+    tick();
+  } catch (e) {}
+}
+function stopMusic() {
+  if (!_music) return;
+  try {
+    const a = _ac(), t = a.currentTime;
+    clearTimeout(_music.timer);
+    _music.out.gain.cancelScheduledValues(t);
+    _music.out.gain.setValueAtTime(_music.out.gain.value, t);
+    _music.out.gain.linearRampToValueAtTime(0.0001, t + 0.5);
+  } catch (e) {}
+  _music = null;
+}
+function updateMusicBtn() { const b = $("musicBtn"); if (b) b.textContent = musicOn ? "🔊" : "🔇"; }
+function toggleMusic() {
+  musicOn = !musicOn;
+  try { localStorage.setItem("relais_music", musicOn ? "on" : "off"); } catch (e) {}
+  if (musicOn) { const ac = _ac(); if (ac.state === "running") startMusic(); else ac.resume().then(startMusic).catch(() => {}); }
+  else stopMusic();
+  updateMusicBtn();
+}
+const _mb = document.getElementById("musicBtn");
+if (_mb) { _mb.onclick = toggleMusic; _mb.style.display = "flex"; _mb.textContent = musicOn ? "🔊" : "🔇"; }
+// Démarre la musique dès le 1er geste utilisateur, DÈS l'accueil (iOS interdit
+// l'audio sans interaction : on ne peut pas la jouer avant le premier contact).
+function _firstGesture() {
+  try {
+    const ac = _ac();
+    const go = () => { if (musicOn && !_music) startMusic(); };
+    if (ac.state === "running") go();
+    else { ac.resume().then(go).catch(() => {}); setTimeout(go, 350); } // reprise async
+  } catch (e) {}
+}
+["touchstart", "pointerdown", "keydown", "click"].forEach((ev) =>
+  window.addEventListener(ev, _firstGesture, { passive: true }));
+
+// Ampoules clignotantes fête foraine sur les deux bords (chenillard multicolore).
+(function buildLights() {
+  ["lightsL", "lightsR"].forEach((id) => {
+    const el = document.getElementById(id); if (!el) return;
+    for (let i = 0; i < 16; i++) {
+      const b = document.createElement("i"); b.className = "bulb";
+      b.style.color = `hsl(${(i * 42) % 360},90%,60%)`;
+      b.style.animationDelay = (i * 0.08) + "s";
+      el.appendChild(b);
+    }
+  });
+})();
+
+// Avertissement photosensibilité (une seule fois, mémorisé).
+(function epiWarn() {
+  const m = document.getElementById("epiModal"); if (!m) return;
+  let ok = false; try { ok = localStorage.getItem("relais_epi_ok") === "1"; } catch (e) {}
+  if (ok) { m.classList.add("hide"); return; }
+  const btn = document.getElementById("epiOk");
+  if (btn) btn.onclick = () => { m.classList.add("hide"); try { localStorage.setItem("relais_epi_ok", "1"); } catch (e) {} };
+})();
+
+// --- Montée de palier : fanfare + explosion d'étincelles à l'écran ------------
+function tierUp(name) {
+  try { // fanfare : arpège montant + accord héroïque final + cymbale
+    const a = _ac(), t = a.currentTime;
+    [0, 4, 7, 12, 16, 19, 24].forEach((s, i) =>
+      _tone(a, t + i * 0.07, "triangle", 523.25 * Math.pow(2, s / 12), null, 0.32, 0.22));
+    [0, 4, 7, 12].forEach((s) =>
+      _tone(a, t + 0.52, "sawtooth", 261.63 * Math.pow(2, s / 12), null, 0.9, 0.13));
+    _noise(a, t + 0.5, 0.6, 2200, 0, 0.18);
+  } catch (e) {}
+  const ov = document.createElement("div");
+  ov.className = "tierup";
+  ov.innerHTML =
+    `<div class="tu-flash"></div><span class="tu-ring"></span><span class="tu-ring r2"></span>` +
+    `<div class="tierup-in"><div class="tierup-sub">RANG SUPÉRIEUR</div>` +
+    `<div class="tierup-name">${name}</div><div class="tierup-crown">👑</div></div>`;
+  const colors = ["#ffd54a", "#a99bff", "#2ecc71", "#ff7a1a", "#5ad1ff", "#ff4d6d"];
+  for (let i = 0; i < 50; i++) {
+    const s = document.createElement("i"); s.className = "tsPark";
+    const ang = Math.random() * Math.PI * 2, dist = 120 + Math.random() * 280;
+    s.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+    s.style.setProperty("--dy", (Math.sin(ang) * dist - 30) + "px");
+    const c = colors[i % colors.length]; s.style.background = c; s.style.color = c;
+    const sz = 6 + Math.random() * 12; s.style.width = sz + "px"; s.style.height = sz + "px";
+    s.style.animationDelay = (Math.random() * 0.12) + "s";
+    ov.appendChild(s);
+  }
+  document.body.appendChild(ov);
+  const wrap = document.querySelector(".wrap");
+  if (wrap) { wrap.classList.add("shakeBig"); setTimeout(() => wrap.classList.remove("shakeBig"), 650); }
+  document.body.classList.add("frenzy"); // les lumières s'emballent à la montée de rang
+  setTimeout(() => { if (curComboMult < 1.6) document.body.classList.remove("frenzy"); }, 2200);
+  setTimeout(() => ov.remove(), 2600);
+}
+
+// --- état de l'aiguille ---
+let needlePos = 0;      // 0..1
+let dir = 1;
+let zoneStart = 0.35;   // fraction
+let lastTs = 0;
+let locked = false;     // anti double-tap pendant l'anim
+
+const $ = (id) => document.getElementById(id);
+
+async function post(path, body) {
+  const r = await fetch(API + path, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "err");
+  return r.json();
+}
+
+// --- villes du monde (menu + pays dérivé) ---
+const CITY_GEO = {
+  "Paris": { lat: 48.85, lng: 2.35, country: "France" }, "Lyon": { lat: 45.76, lng: 4.84, country: "France" },
+  "Marseille": { lat: 43.3, lng: 5.37, country: "France" }, "Nice": { lat: 43.7, lng: 7.27, country: "France" },
+  "Toulouse": { lat: 43.6, lng: 1.44, country: "France" }, "Bordeaux": { lat: 44.84, lng: -0.58, country: "France" },
+  "Lille": { lat: 50.63, lng: 3.06, country: "France" }, "Nantes": { lat: 47.22, lng: -1.55, country: "France" },
+  "Strasbourg": { lat: 48.57, lng: 7.75, country: "France" },
+  "Londres": { lat: 51.5, lng: -0.13, country: "Royaume-Uni" },
+  "Berlin": { lat: 52.52, lng: 13.4, country: "Allemagne" }, "Madrid": { lat: 40.42, lng: -3.7, country: "Espagne" },
+  "Rome": { lat: 41.9, lng: 12.5, country: "Italie" }, "Bruxelles": { lat: 50.85, lng: 4.35, country: "Belgique" },
+  "Lisbonne": { lat: 38.72, lng: -9.14, country: "Portugal" }, "Moscou": { lat: 55.75, lng: 37.62, country: "Russie" },
+  "Istanbul": { lat: 41.01, lng: 28.98, country: "Turquie" }, "Le Caire": { lat: 30.04, lng: 31.24, country: "Égypte" },
+  "Lagos": { lat: 6.52, lng: 3.38, country: "Nigeria" }, "Dakar": { lat: 14.72, lng: -17.47, country: "Sénégal" },
+  "Abidjan": { lat: 5.35, lng: -4.0, country: "Côte d'Ivoire" }, "Nairobi": { lat: -1.29, lng: 36.82, country: "Kenya" },
+  "Johannesburg": { lat: -26.2, lng: 28.04, country: "Afrique du Sud" }, "Dubaï": { lat: 25.2, lng: 55.27, country: "Émirats" },
+  "Mumbai": { lat: 19.08, lng: 72.88, country: "Inde" }, "Delhi": { lat: 28.61, lng: 77.21, country: "Inde" },
+  "Bangkok": { lat: 13.76, lng: 100.5, country: "Thaïlande" }, "Singapour": { lat: 1.35, lng: 103.82, country: "Singapour" },
+  "Pékin": { lat: 39.9, lng: 116.4, country: "Chine" }, "Shanghai": { lat: 31.23, lng: 121.47, country: "Chine" },
+  "Séoul": { lat: 37.57, lng: 126.98, country: "Corée" }, "Tokyo": { lat: 35.68, lng: 139.65, country: "Japon" },
+  "Sydney": { lat: -33.87, lng: 151.21, country: "Australie" }, "São Paulo": { lat: -23.55, lng: -46.63, country: "Brésil" },
+  "Buenos Aires": { lat: -34.6, lng: -58.38, country: "Argentine" }, "Mexico": { lat: 19.43, lng: -99.13, country: "Mexique" },
+  "New York": { lat: 40.71, lng: -74.0, country: "USA" }, "Los Angeles": { lat: 34.05, lng: -118.24, country: "USA" },
+  "Montréal": { lat: 45.5, lng: -73.57, country: "Canada" },
+};
+(function fillCities() {
+  const sel = $("city");
+  Object.keys(CITY_GEO).sort().forEach((n) => {
+    const o = document.createElement("option"); o.value = n; o.textContent = `${n} (${CITY_GEO[n].country})`;
+    if (n === "Paris") o.selected = true; sel.appendChild(o);
+  });
+})();
+
+// --- GPS : place le joueur sur la ville la plus proche ---
+function nearestCity(lat, lng) {
+  const d2 = (a, b, c, e) => { const dy = a - c, dx = (b - e) * Math.cos((a + c) / 2 * Math.PI / 180); return dy * dy + dx * dx; };
+  let best = null, bd = Infinity;
+  for (const [n, g] of Object.entries(CITY_GEO)) { const d = d2(lat, lng, g.lat, g.lng); if (d < bd) { bd = d; best = n; } }
+  return best;
+}
+$("gpsBtn").onclick = () => {
+  if (!navigator.geolocation) { $("gpsNote").textContent = "GPS indisponible sur cet appareil."; return; }
+  $("gpsNote").textContent = "📍 localisation…";
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      const city = nearestCity(p.coords.latitude, p.coords.longitude);
+      $("city").value = city;
+      $("gpsNote").textContent = `📍 ville la plus proche : ${city}`;
+    },
+    () => { $("gpsNote").textContent = "Position refusée — choisis ta ville dans la liste."; },
+    { enableHighAccuracy: false, timeout: 8000 }
+  );
+};
+
+// --- compte : pseudo + rang gardés (token local, réutilisable entre appareils) ---
+try {
+  const savedName = localStorage.getItem("relais_name");
+  if (savedName) $("name").value = savedName;
+} catch (e) {}
+
+// --- rejoindre ---
+$("joinBtn").onclick = async () => {
+  const name = $("name").value.trim() || "Anonyme";
+  const city = $("city").value, country = CITY_GEO[city]?.country || "France";
+  let token = null; try { token = localStorage.getItem("relais_token"); } catch (e) {}
+  const res = await post("/api/join", { name, city, country, token });
+  playerId = res.playerId;
+  try { localStorage.setItem("relais_token", res.token); localStorage.setItem("relais_name", name); } catch (e) {}
+  if (res.me.xp > 0) $("seasonLine").textContent = `Bon retour ${name} — rang ${res.me.tier} (${res.me.xp} xp) restauré ✅`;
+  applyMe(res.me);
+  $("join").style.display = "none";
+  $("game").style.display = "block";
+  startMusic(); // au cas où (déjà lancée au 1er geste sur l'accueil) — garde anti-oubli
+  schedulePop(); // événements festifs aléatoires
+  requestAnimationFrame(() => drawWorld());
+  newZone();
+  requestAnimationFrame(loop);
+  connectStream();
+};
+
+const TIER_ORDER = ["Bronze", "Argent", "Or", "Platine", "Diamant", "Maître", "Champion", "Légende"];
+const TIER_PREVIEW = [
+  { name: "Bronze",   mult: 1,  sweep: 1.90, zone: 0.33 },
+  { name: "Argent",   mult: 2,  sweep: 2.30, zone: 0.29 },
+  { name: "Or",       mult: 3,  sweep: 2.70, zone: 0.25 },
+  { name: "Platine",  mult: 5,  sweep: 3.10, zone: 0.28 },
+  { name: "Diamant",  mult: 8,  sweep: 3.60, zone: 0.25 },
+  { name: "Maître",   mult: 13, sweep: 4.10, zone: 0.16 },
+  { name: "Champion", mult: 20, sweep: 4.70, zone: 0.135 },
+  { name: "Légende",  mult: 30, sweep: 5.40, zone: 0.11 },
+];
+let lastTier = null;
+function applyMe(m) {
+  if (forceLevel != null) { // aperçu ?lvl= : on force le rang affiché + la difficulté
+    const tp = TIER_PREVIEW[forceLevel];
+    m = { ...m, tier: tp.name, mult: tp.mult, difficulty: { sweep: tp.sweep, zone: tp.zone },
+      nextTier: forceLevel >= 4 ? null : { name: TIER_PREVIEW[forceLevel + 1].name, xpNeeded: 0 },
+      tierProgress: forceLevel >= 4 ? 100 : 0, tierXp: 0, tierSize: forceLevel >= 4 ? 0 : 60 };
+  }
+  // Détection de montée de palier (pas au tout premier chargement).
+  if (lastTier !== null && m.tier !== lastTier
+      && TIER_ORDER.indexOf(m.tier) > TIER_ORDER.indexOf(lastTier)) {
+    tierUp(m.tier);
+  }
+  lastTier = m.tier;
+  musicLevel = forceLevel != null ? forceLevel : Math.max(0, TIER_ORDER.indexOf(m.tier)); // musique ∝ rang (ou forcée par ?lvl=)
+  me = m;
+  diff = m.difficulty;
+  $("tierBadge").textContent = m.tier;
+  $("multTxt").textContent = "×" + m.mult;
+  $("streakTxt").textContent = "série " + m.streak;
+  // Compteur clair "X/Y vers le rang suivant" qui monte à chaque passe réussie.
+  $("tierNext").textContent = m.nextTier
+    ? `→ ${m.nextTier.name} · ${m.tierXp ?? 0}/${m.tierSize ?? "?"}` : "RANG MAX 👑";
+  const pct = typeof m.tierProgress === "number" ? m.tierProgress : 100;
+  $("xpFill").style.width = Math.max(4, pct) + "%";
+  applyCosmetics();
+}
+
+function newZone() {
+  const w = diff.zone;
+  zoneStart = Math.random() * (1 - w);
+  $("zone").style.left = (zoneStart * 100) + "%";
+  $("zone").style.width = (w * 100) + "%";
+}
+
+// --- boucle d'animation de l'aiguille ---
+function loop(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = (ts - lastTs) / 1000; lastTs = ts;
+  // période de base 1.5s pour un aller ; accélérée par sweep
+  const speed = (1 / 1.5) * diff.sweep;
+  needlePos += dir * speed * dt;
+  if (needlePos >= 1) { needlePos = 1; dir = -1; }
+  if (needlePos <= 0) { needlePos = 0; dir = 1; }
+  $("needle").style.left = (needlePos * 100) + "%";
+  requestAnimationFrame(loop);
+}
+
+// --- tenter une passe ---
+let bannedUntil = 0;
+async function raw(path) {
+  const res = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) });
+  return { status: res.status, body: await res.json().catch(() => ({})) };
+}
+// Entrée OPTIMISTE : on réagit à l'écran INSTANTANÉMENT (le hit-test est local),
+// puis on confirme auprès du serveur en arrière-plan. Aucune latence réseau dans
+// la boucle de jeu — le serveur reste juge (il recale la chaîne/les points).
+function attempt() {
+  if (!playerId || locked) return;
+  if (Date.now() < bannedUntil) { flash("miss"); return; } // suspendu : tap ignoré
+  const inZone = needlePos >= zoneStart && needlePos <= zoneStart + diff.zone;
+  locked = true;
+  setTimeout(() => (locked = false), 90); // anti double-tap, indépendant du réseau
+  // dès qu'on joue, on masque la consigne du haut (sinon le badge COMBO se superpose)
+  const _ab = $("arenaBig"); if (_ab && _ab.style.display !== "none") _ab.style.display = "none";
+
+  if (inZone) {
+    // --- feedback immédiat ---
+    hitStreak++;
+    playHit(hitStreak); // 🔊 son de réussite qui monte avec le combo
+    flash("hit");
+    hitFx(hitStreak); // ✨ particules + pop du compteur
+    floatText("+" + Math.round(BASE_POINTS * (me?.mult || 1) * curComboMult), "#2ecc71");
+    $("chainVal").textContent = (parseInt($("chainVal").textContent, 10) || 0) + 1;
+    newZone();
+    // --- confirmation serveur (recale les valeurs autoritaires) ---
+    raw("/api/pass").then(({ status, body }) => {
+      if (status === 403) { applyBan(body); return; }   // suspendu
+      if (status === 429) return;                        // trop rapide : SSE recalera la chaîne
+      if (body && body.chain != null) $("chainVal").textContent = body.chain;
+      if (body && body.comboMult) showCombo(body.comboMult); // multiplicateur de combo
+      if (body && body.me) applyMe(body.me);
+    }).catch(() => {});
+  } else {
+    // --- raté : bris immédiat ---
+    hitStreak = 0; // combo perdu
+    hideCombo();
+    flash("miss");
+    breakFx(); // 💥 flash rouge + éclats + secousse (la casse est spectaculaire, pas vide)
+    playBreak(); // 🔊 la chaîne se brise
+    floatText("CASSÉ !", "#e74c3c");
+    $("chainVal").textContent = "0";
+    newZone();
+    raw("/api/break").then(({ body }) => {
+      if (!body) return;
+      if (body.ignored) { floatText("SUSPENDU", "#ff4d6d"); }
+      else if (body.brokeAt > 0) {
+        $("chainSub").textContent = `tu as cassé une chaîne de ${body.brokeAt} 💀 (−${body.penalty} pts)`;
+      }
+      if (body.banSec) applyBan(body);
+      if (body.me) applyMe(body.me);
+    }).catch(() => {});
+  }
+}
+function applyBan(body) {
+  const secs = body.bannedFor || body.banSec || 0;
+  if (secs > 0) { bannedUntil = Date.now() + secs * 1000; }
+}
+setInterval(() => {
+  const el = $("banNote"), rb = $("reviveBtn"); if (!el) return;
+  const left = Math.ceil((bannedUntil - Date.now()) / 1000);
+  if (left > 0) { el.style.display = "block"; el.textContent = `🟥 SUSPENDU ${left}s — sabotage détecté, tes ratés ne comptent plus`; if (rb) { rb.style.display = "block"; rb.textContent = inApp ? "📺 Regarder une pub pour reprendre" : "Reprendre maintenant"; } }
+  else { el.style.display = "none"; if (rb) rb.style.display = "none"; }
+}, 250);
+
+// ============================================================================
+//  PONT PUB RÉCOMPENSÉE
+//  Dans l'app native : on demande une VRAIE pub AdMob au code natif (via
+//  postMessage) et on attend son résultat. En navigateur : pub simulée (le web
+//  reste jouable/démontrable). Aucune fonctionnalité payante : tout se débloque
+//  en regardant une pub.
+// ============================================================================
+// « app avec pubs natives » = vrai UNIQUEMENT si l'app native a injecté ce flag
+// (build 9+ avec le pont AdMob). Anciens builds / navigateur -> pub simulée,
+// pour ne jamais laisser un joueur bloqué sur un bouton qui ne répond pas.
+const inApp = !!window.__RELAIS_NATIVE_ADS
+  && !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
+let _adResolve = null;
+// Le code natif appelle ceci via injectJavaScript quand la pub est finie.
+window.__onAdResult = (ok) => { if (_adResolve) _adResolve(!!ok); };
+
+function fakeAd() { // pub simulée (navigateur uniquement)
+  return new Promise((resolve) => {
+    const m = $("adModal"), c = $("adCount"); let n = 5; m.classList.add("on"); c.textContent = n;
+    const t = setInterval(() => { n--; c.textContent = n; if (n <= 0) { clearInterval(t); m.classList.remove("on"); resolve(); } }, 700);
+  });
+}
+// Affiche une pub récompensée -> résout true si la récompense est gagnée.
+// Hors app native AdMob (navigateur / build sans pub) : déblocage DIRECT gratuit
+// (aucune pub, ni réelle ni simulée) -> version 100% gratuite, propre pour la review.
+function showRewardedAd(reason) {
+  return new Promise((resolve) => {
+    if (!inApp) { resolve(true); return; }
+    let done = false;
+    const finish = (ok) => { if (done) return; done = true; _adResolve = null; clearTimeout(to); resolve(ok); };
+    const to = setTimeout(() => finish(false), 60000); // sécurité anti-blocage
+    _adResolve = finish;
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "SHOW_REWARDED", reason }));
+  });
+}
+// Pub vue -> jeton de récompense serveur (à durcir en SSV AdMob côté serveur).
+async function watchAdForReward(reason) {
+  const ok = await showRewardedAd(reason);
+  if (!ok) return null;
+  try { return (await post("/api/ad/reward", { playerId })).rewardToken; }
+  catch (e) { return null; }
+}
+
+// --- Revive du carton rouge (regarde une pub) ---
+$("reviveBtn").onclick = async () => {
+  const btn = $("reviveBtn"); btn.disabled = true;
+  const token = await watchAdForReward("revive");
+  btn.disabled = false;
+  if (!token) return;
+  try {
+    const r = await post("/api/revive", { playerId, rewardToken: token });
+    bannedUntil = 0; applyMe(r.me); floatText("REPRISE ✨", "#2ecc71");
+    $("banNote").style.display = "none"; btn.style.display = "none";
+  } catch (e) {}
+};
+
+// ============================================================================
+//  BOUTIQUE (cosmétique) — déblocage 100% par pub, aucun paiement
+// ============================================================================
+let shopData = null;
+$("shopBtn").onclick = openShop;
+$("shopClose").onclick = () => $("shopModal").classList.remove("on");
+
+async function openShop() {
+  $("shopModal").classList.add("on");
+  $("shopBody").innerHTML = '<div class="sub">chargement…</div>';
+  try { shopData = await fetch(API + "/api/shop?playerId=" + playerId).then((x) => x.json()); }
+  catch (e) { shopData = { shop: { sparks: [], breaks: [] }, owned: [], equipped: {} }; }
+  renderShop();
+}
+function renderShop() {
+  if (!shopData) return;
+  const owned = new Set(shopData.owned || []);
+  const eq = me?.equipped || shopData.equipped || {};
+  const section = (title, type, items, slot) => {
+    const rows = (items || []).map((it) => {
+      const isOwned = it.price === 0 || owned.has(it.id);
+      const isEq = eq[slot] === it.id;
+      const swatch = it.emoji
+        ? `<span class="sw" style="background:none;box-shadow:none;font-size:19px">${it.emoji}</span>`
+        : `<span class="sw" style="background:${it.color}"></span>`;
+      let btn;
+      if (isEq) btn = `<button class="shopbtn eq" disabled>Équipé ✓</button>`;
+      else if (isOwned) btn = `<button class="shopbtn own" data-eq="${type}:${it.id}">Équiper</button>`;
+      else btn = `<button class="shopbtn ad" data-ad="${type}:${it.id}">${inApp ? "📺 Débloquer" : "Débloquer"}</button>`;
+      return `<div class="shopitem"><div class="si-l">${swatch}<span>${it.name}</span></div>${btn}</div>`;
+    }).join("");
+    return `<div class="shoph">${title}</div>${rows}`;
+  };
+  $("shopBody").innerHTML =
+    section("✨ Étincelles", "sparks", shopData.shop.sparks, "spark") +
+    section("🔊 Sons de bris", "breaks", shopData.shop.breaks, "break");
+  $("shopBody").querySelectorAll("[data-eq]").forEach((b) => {
+    b.onclick = () => equipItem(...b.dataset.eq.split(":"));
+  });
+  $("shopBody").querySelectorAll("[data-ad]").forEach((b) => {
+    b.onclick = () => unlockItem(b, ...b.dataset.ad.split(":"));
+  });
+}
+async function equipItem(type, id) {
+  try { const r = await post("/api/equip", { playerId, type, itemId: id }); applyMe(r.me); renderShop(); }
+  catch (e) {}
+}
+async function unlockItem(btn, type, id) {
+  btn.disabled = true; btn.textContent = "…";
+  const token = await watchAdForReward("unlock");
+  if (!token) { btn.disabled = false; btn.textContent = inApp ? "📺 Débloquer" : "Débloquer"; return; }
+  try {
+    const r = await post("/api/unlock", { playerId, type, itemId: id, rewardToken: token });
+    applyMe(r.me);
+    shopData.owned = r.me.owned; shopData.equipped = r.me.equipped;
+    if (type === "breaks") playBreak(id); // petit aperçu du son débloqué
+    renderShop();
+  } catch (e) { btn.disabled = false; btn.textContent = inApp ? "📺 Débloquer" : "Débloquer"; }
+}
+
+// --- Partage (viralité) ---
+$("shareBtn").onclick = async () => {
+  const txt = `Je suis ${me?.tier || "Bronze"} sur RELAIS ✨ et ${me?.city || "ma ville"} grimpe au classement mondial. Tu tiens combien de temps la chaîne ? 🔥`;
+  try {
+    if (navigator.share) await navigator.share({ title: "RELAIS ✨", text: txt, url: location.origin });
+    else { await navigator.clipboard.writeText(txt + " " + location.origin); $("online").textContent = "🔗 lien copié — envoie-le à tes potes !"; }
+  } catch (e) {}
+};
+
+// --- Skin d'étincelle / curseur équipé (cosmétique) ---
+const SPARK_SKINS = {
+  default: { color: "#ffc93d" },
+  neon: { color: "#a99bff" },
+  fire: { color: "#ff7a1a" },
+  ice: { color: "#5ad1ff" },
+  gold: { color: "#ffd700" },
+  rainbow: { color: "#ff4d6d", emoji: "🌈", rainbow: true },
+  unicorn: { color: "#ff9ff3", emoji: "🦄" },
+  star: { color: "#ffd54a", emoji: "⭐" },
+  heart: { color: "#ff4d6d", emoji: "❤️" },
+  bolt: { color: "#00d2ff", emoji: "⚡" },
+  skull: { color: "#c9c2e8", emoji: "💀" },
+};
+function applyCosmetics() {
+  const skin = SPARK_SKINS[me?.equipped?.spark] || SPARK_SKINS.default;
+  const n = $("needle"); if (!n) return;
+  n.classList.toggle("rainbow", !!skin.rainbow);
+  let emo = document.getElementById("needleEmo");
+  if (skin.emoji) {
+    // L'emoji REMPLACE la barre : on masque la ligne blanche, seul l'emoji bouge.
+    n.style.background = "transparent";
+    n.style.boxShadow = "none";
+    if (!emo) { emo = document.createElement("span"); emo.id = "needleEmo"; emo.className = "needle-emo"; n.appendChild(emo); }
+    emo.textContent = skin.emoji;
+  } else {
+    n.style.background = ""; // rétablit la barre blanche (CSS)
+    n.style.boxShadow = `0 0 12px #fff, 0 0 24px ${skin.color}`;
+    if (emo) emo.remove();
+  }
+}
+
+function flash(cls) {
+  const a = $("arena");
+  a.classList.add(cls);
+  setTimeout(() => a.classList.remove(cls), 320);
+}
+function floatText(txt, color) {
+  const el = document.createElement("div");
+  el.className = "float"; el.textContent = txt; el.style.color = color;
+  el.style.left = (needlePos * 90 + 5) + "%"; el.style.top = "50%";
+  $("arena").appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+// --- Combo : multiplicateur qui monte quand on enchaîne des passes rapprochées.
+let curComboMult = 1;
+let _comboTimer = null;
+function showCombo(mult) {
+  curComboMult = mult || 1;
+  const b = $("comboBadge"); if (!b) return;
+  clearTimeout(_comboTimer);
+  if (curComboMult > 1) {
+    b.textContent = "COMBO ×" + curComboMult;
+    const heat = Math.min(1, (curComboMult - 1) / 2); // 0 → 1 selon l'intensité
+    const col = heat < 0.5 ? "#ffd54a" : heat < 0.85 ? "#ff9a3c" : "#ff4d6d";
+    b.style.color = col; b.style.textShadow = `0 0 16px ${col}`;
+    b.style.fontSize = (20 + heat * 16) + "px";
+    b.classList.add("on"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
+    const arena = $("arena"); // l'arène s'auréole et chauffe avec le combo
+    if (arena) { arena.style.boxShadow = `0 0 ${12 + heat * 44}px ${col}`; arena.style.borderColor = col; }
+    document.body.classList.toggle("frenzy", curComboMult >= 1.6); // les lumières s'emballent
+    if (curComboMult >= 2) comboFx(curComboMult); // secousse + vibration aux gros combos
+    _comboTimer = setTimeout(hideCombo, 1900); // s'efface si on marque une pause
+  } else { b.classList.remove("on"); clearAura(); }
+}
+function clearAura() { const arena = $("arena"); if (arena) { arena.style.boxShadow = ""; arena.style.borderColor = ""; } }
+function hideCombo() { curComboMult = 1; hitStreak = 0; const b = $("comboBadge"); if (b) b.classList.remove("on"); clearAura(); document.body.classList.remove("frenzy"); }
+// Secousse d'écran + vibration (Android ; iOS ignore sans erreur) proportionnelles au combo.
+function comboFx(mult) {
+  const wrap = document.querySelector(".wrap");
+  if (wrap) { wrap.classList.remove("comboShake"); void wrap.offsetWidth; wrap.classList.add("comboShake"); }
+  try { if (navigator.vibrate) navigator.vibrate(Math.round(12 + (mult - 2) * 28)); } catch (e) {}
+}
+
+// Gerbe de particules + pop du compteur à chaque passe réussie (grossit avec le combo).
+function hitFx(combo) {
+  const arena = $("arena"); if (!arena) return;
+  const x = needlePos * 90 + 5, n = 4 + Math.min(11, combo | 0);
+  const cols = ["#2ecc71", "#7bed9f", "#ffd54a", "#a29bfe", "#5ad1ff"];
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("i"); p.className = "hitpx";
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, dist = 28 + Math.random() * 64;
+    p.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+    p.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+    p.style.left = x + "%"; p.style.top = "50%";
+    const c = cols[i % cols.length]; p.style.background = c; p.style.color = c;
+    const sz = 4 + Math.random() * 5; p.style.width = p.style.height = sz + "px";
+    arena.appendChild(p); setTimeout(() => p.remove(), 620);
+  }
+  const cv = $("chainVal"); if (cv) { cv.classList.remove("pop"); void cv.offsetWidth; cv.classList.add("pop"); }
+}
+// Cassure : flash rouge plein écran + éclats + secousse + compteur qui se brise.
+function breakFx() {
+  const ov = document.createElement("div"); ov.className = "breakfx";
+  const flash = document.createElement("div"); flash.className = "bf-flash"; ov.appendChild(flash);
+  const cols = ["#e74c3c", "#ff7a1a", "#ffb3b3", "#c0392b", "#ffd54a"];
+  for (let i = 0; i < 22; i++) {
+    const s = document.createElement("i"); s.className = "bshard";
+    const ang = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 190;
+    s.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+    s.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+    const c = cols[i % cols.length]; s.style.background = c; s.style.color = c;
+    const sz = 5 + Math.random() * 9; s.style.width = s.style.height = sz + "px";
+    ov.appendChild(s);
+  }
+  document.body.appendChild(ov);
+  const wrap = document.querySelector(".wrap");
+  if (wrap) { wrap.classList.remove("shakeBig"); void wrap.offsetWidth; wrap.classList.add("shakeBig"); }
+  const cv = $("chainVal"); if (cv) { cv.classList.remove("broke"); void cv.offsetWidth; cv.classList.add("broke"); }
+  try { if (navigator.vibrate) navigator.vibrate([30, 40, 60]); } catch (e) {}
+  setTimeout(() => ov.remove(), 720);
+}
+
+// ============================================================================
+//  ÉVÉNEMENTS FESTIFS ALÉATOIRES — popent toutes les ~11-23 s pendant le jeu,
+//  avec son + montée temporaire de la musique. Pour ne jamais s'ennuyer.
+// ============================================================================
+let _popTimer = null;
+function musicFlourish() {
+  musicBoost = 1; clearTimeout(_boostT); _boostT = setTimeout(() => { musicBoost = 0; }, 6000);
+  try {
+    const a = _ac(), t = a.currentTime;
+    _noise(a, t, 0.5, 300, 3500, 0.1); // riser
+    [0, 4, 7, 12, 16, 19].forEach((s, i) => _tone(a, t + i * 0.05, "triangle", 523.25 * Math.pow(2, s / 12), null, 0.22, 0.13));
+  } catch (e) {}
+}
+function popSound(kind) {
+  try {
+    const a = _ac(), t = a.currentTime;
+    if (kind === "chime") [0, 4, 7, 12, 16].forEach((s, i) => _tone(a, t + i * 0.05, "sine", 659.25 * Math.pow(2, s / 12), null, 0.3, 0.15));
+    else if (kind === "sparkle") for (let i = 0; i < 9; i++) _tone(a, t + i * 0.04, "triangle", 1400 + Math.random() * 2200, null, 0.14, 0.07);
+    else _noise(a, t, 0.55, 200, 3000, 0.13); // whoosh
+  } catch (e) {}
+}
+function popBanner(txt) {
+  const b = document.createElement("div"); b.className = "popbanner"; b.textContent = txt;
+  document.body.appendChild(b); setTimeout(() => b.remove(), 1300);
+}
+function spawnBurst(xPct, yPct, n) {
+  const cols = ["#ffd54a", "#a99bff", "#2ecc71", "#ff7a1a", "#5ad1ff", "#ff4d6d"];
+  const w = document.createElement("div"); w.className = "popfx"; w.style.left = xPct + "%"; w.style.top = yPct + "%";
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("i"); s.className = "popShard";
+    const ang = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 130;
+    s.style.setProperty("--dx", Math.cos(ang) * dist + "px"); s.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+    const c = cols[i % cols.length]; s.style.background = c; s.style.color = c;
+    const sz = 5 + Math.random() * 8; s.style.width = s.style.height = sz + "px"; w.appendChild(s);
+  }
+  document.body.appendChild(w); setTimeout(() => w.remove(), 900);
+}
+function popFireworks() {
+  for (let k = 0; k < 3; k++) setTimeout(() => spawnBurst(15 + Math.random() * 70, 18 + Math.random() * 45, 18), k * 200);
+  popSound("chime");
+}
+function popStarShower() {
+  const emo = ["⭐", "🌟", "✨", "💫"];
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement("div"); s.className = "starfall"; s.textContent = emo[i % emo.length];
+    s.style.left = (5 + Math.random() * 90) + "%"; s.style.fontSize = (16 + Math.random() * 18) + "px";
+    s.style.animationDelay = (Math.random() * 0.5) + "s"; s.style.animationDuration = (1.6 + Math.random() * 1.2) + "s";
+    document.body.appendChild(s); setTimeout(() => s.remove(), 3300);
+  }
+  popSound("sparkle");
+}
+function popRainbow() {
+  const el = document.createElement("div"); el.className = "rainbowsweep";
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1100);
+  popSound("whoosh");
+}
+function randomPop() {
+  const r = Math.random();
+  if (r < 0.4) popFireworks(); else if (r < 0.75) popStarShower(); else popRainbow();
+  musicFlourish(); // la musique s'emballe un instant
+  document.body.classList.add("frenzy");
+  setTimeout(() => { if (curComboMult < 1.6) document.body.classList.remove("frenzy"); }, 2500);
+}
+function schedulePop() {
+  clearTimeout(_popTimer);
+  _popTimer = setTimeout(() => {
+    if (playerId && Date.now() >= bannedUntil && !document.hidden) randomPop();
+    schedulePop();
+  }, 11000 + Math.random() * 12000); // toutes les 11-23 s
+}
+
+$("arena").addEventListener("click", attempt);
+$("arena").addEventListener("touchstart", (e) => { e.preventDefault(); attempt(); }, { passive: false });
+window.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); attempt(); } });
+
+// --- monde vivant : temps réel via SSE (repli sur polling si indisponible) ---
+function connectStream() {
+  try {
+    const es = new EventSource(API + "/api/stream?playerId=" + playerId);
+    es.onmessage = (ev) => { try { renderState(JSON.parse(ev.data)); } catch (e) {} };
+    es.onerror = () => { es.close(); startPolling(); }; // repli
+  } catch (e) { startPolling(); }
+}
+let polling = false;
+function startPolling() {
+  if (polling) return; polling = true;
+  const tick = async () => { try { renderState(await fetch(API + "/api/state?playerId=" + playerId).then((x) => x.json())); } catch (e) {} };
+  tick(); setInterval(tick, 1300);
+}
+
+function renderState(r) {
+  if (!r || !r.chain) return;
+  $("chainVal").textContent = r.chain.current;
+  $("chainSub").textContent = r.chain.lastBreakBy
+    ? `record ${r.chain.best} · dernier crash : ${r.chain.lastBreakBy} (${r.chain.lastBreakCity})`
+    : `record : ${r.chain.best}`;
+  renderBoard($("cityBoard"), r.cities, me?.city, r.myCityRank);
+  renderBoard($("countryBoard"), r.countries, me?.country, r.myCountryRank);
+  if (r.season) {
+    const s = r.season, m = Math.floor(s.secondsLeft / 86400);
+    const left = m > 0 ? `${m}j` : `${Math.floor(s.secondsLeft / 3600)}h ${Math.floor((s.secondsLeft % 3600) / 60)}m`;
+    const hof = r.hallOfFame?.[0] ? ` · 🏆 S${r.hallOfFame[0].season} : ${r.hallOfFame[0].topCity}` : "";
+    $("seasonLine").innerHTML = `Saison <b style="color:#a99bff;font-family:monospace">${s.number}</b> · fin dans <b style="color:#a99bff">${left}</b>${hof}`;
+  }
+  renderContinents(r.continents, r.myContinent);
+  renderLeague(r.myLeague);
+  renderZoom(r.myCountry, r.myRegion);
+  $("online").textContent = `⚡ ${r.playersOnline} joueur(s) · temps réel`;
+  renderMap();
+}
+
+// --- Zoom national : régions du pays du joueur ---
+let zoomCache = { country: null, at: 0 };
+async function renderZoom(country, myRegion) {
+  const el = $("zoomCard"); if (!el || !country) return;
+  const now = Date.now();
+  if (zoomCache.country !== country || now - zoomCache.at > 2500) {
+    zoomCache = { country, at: now };
+    try {
+      const data = await fetch(API + "/api/country?name=" + encodeURIComponent(country)).then((x) => x.json());
+      const rows = (data.regions || []).slice(0, 6).map((r, i) =>
+        `<div class="lrow${r.region === myRegion ? " meCity" : ""}"><span class="lp">${i + 1}</span><span class="nm">${r.region}</span><span class="sc">${r.score}</span></div>`
+      ).join("");
+      el.innerHTML = `<div class="lhead"><span class="lname">🔎 ${country} — régions</span></div>${rows || '<div class="lrow"><span class="nm">—</span></div>'}`;
+    } catch (e) {}
+  }
+}
+
+function renderContinents(list, mine) {
+  const el = $("contBoard"); if (!el || !list) return;
+  el.innerHTML = "";
+  list.forEach((row, i) => {
+    const d = document.createElement("div");
+    d.className = "row" + (row.name === mine ? " mine" : "");
+    d.innerHTML = `<span class="n">${i + 1}</span><span class="nm">${row.name}</span><span class="sc">${row.score}</span>`;
+    el.appendChild(d);
+  });
+}
+
+async function renderLeague(my) {
+  const card = $("leagueCard"); if (!card) return;
+  if (!my) { card.innerHTML = ""; return; }
+  let standings = [];
+  try { standings = (await fetch(API + "/api/leagues?city=" + encodeURIComponent(me?.city || "")).then((x) => x.json())).standings[my.league] || []; } catch (e) {}
+  const pill = my.promo ? `<span class="pill promo">⬆️ zone montée</span>`
+    : my.releg ? `<span class="pill releg">⬇️ zone descente</span>`
+    : `<span class="pill safe">maintien</span>`;
+  const rows = standings.map((c, i) =>
+    `<div class="lrow${c.name === me?.city ? " meCity" : ""}"><span class="lp">${i + 1}</span><span class="nm">${c.name}</span><span class="sc">${c.score}</span></div>`
+  ).join("");
+  card.innerHTML = `<div class="lhead"><span class="lname">🏆 Ligue ${my.league}</span><span style="color:#8a83ad;font-size:12px">${my.pos}ᵉ / ${my.size}</span>${pill}</div>${rows}`;
+}
+
+// --- carte de conquête (vraie carte du monde, projection équirectangulaire) ---
+const WORLD_CONTINENTS = [
+  [[-168,66],[-155,71],[-125,71],[-95,70],[-80,68],[-60,58],[-56,51],[-66,47],[-70,42],[-76,35],[-81,25],[-90,29],[-97,22],[-105,22],[-113,28],[-120,34],[-124,42],[-125,48],[-135,57],[-150,60],[-168,66]],
+  [[-45,60],[-20,70],[-25,83],[-50,83],[-58,76],[-53,66],[-45,60]],
+  [[-78,8],[-72,11],[-62,10],[-50,5],[-44,0],[-35,-5],[-38,-13],[-48,-25],[-58,-34],[-64,-42],[-68,-52],[-74,-52],[-73,-42],[-71,-30],[-76,-14],[-81,-6],[-81,2],[-78,8]],
+  [[-17,15],[-16,21],[-10,28],[0,36],[10,37],[20,32],[32,31],[35,24],[43,11],[51,12],[42,-2],[40,-12],[35,-24],[25,-34],[18,-35],[13,-23],[9,-1],[6,4],[-8,5],[-17,15]],
+  [[-10,36],[-9,44],[-4,48],[0,50],[-5,58],[8,58],[10,64],[18,70],[28,71],[40,68],[45,60],[40,50],[30,46],[24,41],[16,40],[13,45],[8,44],[3,43],[-3,43],[-10,36]],
+  [[40,50],[45,60],[60,70],[75,73],[100,77],[130,73],[150,72],[168,68],[162,60],[155,52],[142,46],[130,43],[127,38],[122,31],[121,24],[108,20],[106,10],[100,8],[98,16],[92,21],[88,22],[80,8],[73,17],[68,24],[57,25],[50,28],[45,30],[43,40],[40,42],[45,44],[55,46],[52,50],[45,48],[40,50]],
+  [[114,-22],[122,-18],[130,-12],[137,-12],[142,-11],[146,-19],[153,-28],[150,-38],[140,-38],[129,-32],[115,-34],[114,-22]],
+];
+const projX = (lng) => (lng + 180) / 360 * 100;
+const projY = (lat) => (90 - lat) / 180 * 100;
+function drawWorld() {
+  const cv = $("worldCanvas"); if (!cv) return;
+  const r = cv.getBoundingClientRect(); if (!r.width) return;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = r.width * dpr; cv.height = r.height * dpr;
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, r.width, r.height);
+  ctx.fillStyle = "rgba(124,92,255,0.12)"; ctx.strokeStyle = "rgba(124,92,255,0.4)"; ctx.lineWidth = 0.7;
+  for (const poly of WORLD_CONTINENTS) {
+    ctx.beginPath();
+    poly.forEach(([lng, lat], i) => {
+      const x = projX(lng) / 100 * r.width, y = projY(lat) / 100 * r.height;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+}
+window.addEventListener("resize", drawWorld);
+async function renderMap() {
+  try {
+    const m = await fetch(API + "/api/map").then((x) => x.json());
+    const map = $("map");
+    map.querySelectorAll(".dot,.dlabel").forEach((e) => e.remove());
+    for (const n of m.nodes) {
+      const size = 6 + n.intensity * 18;
+      const x = projX(n.lng), y = projY(n.lat);
+      const d = document.createElement("div");
+      d.className = "dot" + (n.leader ? " lead" : "") + (n.name === me?.city ? " me" : "");
+      d.style.cssText = `left:${x}%;top:${y}%;width:${size}px;height:${size}px;opacity:${0.45 + n.intensity * 0.55}`;
+      map.appendChild(d);
+      if (n.leader || n.name === me?.city) {
+        const l = document.createElement("div"); l.className = "dlabel"; l.textContent = n.name;
+        l.style.cssText = `left:${x}%;top:${y - 4}%`; map.appendChild(l);
+      }
+    }
+  } catch (e) {}
+}
+
+function renderBoard(el, list, mine, myRank) {
+  el.innerHTML = "";
+  list.forEach((row, i) => {
+    const d = document.createElement("div");
+    d.className = "row" + (row.name === mine ? " mine" : "");
+    d.innerHTML = `<span class="n">${i + 1}</span><span class="nm">${row.name}</span><span class="sc">${row.score}</span>`;
+    el.appendChild(d);
+  });
+  if (mine && myRank && myRank.rank > list.length) {
+    const d = document.createElement("div");
+    d.className = "row mine";
+    d.innerHTML = `<span class="n">${myRank.rank}</span><span class="nm">${mine} (toi)</span><span class="sc">—</span>`;
+    el.appendChild(d);
+  }
+}
+</script>
+</body>
+</html>
