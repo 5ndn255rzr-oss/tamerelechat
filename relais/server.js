@@ -144,7 +144,47 @@ const CITY_GEO = {
   "Los Angeles":  { lat: 34.05, lng: -118.24, country: "USA", region: "Californie" },
   "Montréal":     { lat: 45.50, lng: -73.57, country: "Canada", region: "Québec" },
 };
-const regionOf = (city) => CITY_GEO[city]?.region || "—";
+const regionOf = (city) => cityGeo.get(city)?.region || CITY_GEO[city]?.region || "—";
+
+// --- GÉO DYNAMIQUE : n'importe quelle commune du monde (via OpenStreetMap) -----
+// Les villes ne sont plus figées : quand un joueur rejoint depuis une commune
+// géocodée côté client (recherche ou géoloc), on mémorise ici ses coordonnées,
+// sa région (state/province) et son continent. Amorcé avec les grandes villes
+// historiques pour garder la carte peuplée au démarrage.
+const cityGeo = new Map(); // nom ville -> { lat, lng, country, region, continent }
+for (const [name, g] of Object.entries(CITY_GEO)) {
+  cityGeo.set(name, { lat: g.lat, lng: g.lng, country: g.country, region: g.region, continent: CONTINENT_OF[g.country] || "Monde" });
+}
+// Table code pays ISO (alpha-2) -> continent, pour déduire le continent d'une
+// commune quelconque à partir de ce que renvoie le géocodeur.
+const CONTINENT_BY_CC = {
+  "Europe": "al ad at by be ba bg hr cy cz dk ee fo fi fr de gi gr gg hu is ie im it je lv li lt lu mt md mc me nl mk no pl pt ro ru sm rs sk si es se ch tr ua gb va ax".split(" "),
+  "Afrique": "dz ao bj bw bf bi cv cm cf td km cg cd ci dj eg gq er sz et ga gm gh gn gw ke ls lr ly mg mw ml mr mu yt ma mz na ne ng re rw sh st sn sc sl so za ss sd tz tg tn ug eh zm zw".split(" "),
+  "Asie": "af am az bh bd bt bn kh cn ge hk in id ir iq il jp jo kz kw kg la lb mo my mv mn mm np kp om pk ps ph qa sa sg kr lk sy tw tj th tl tm ae uz vn ye".split(" "),
+  "Océanie": "as au ck fj pf gu ki mh fm nr nc nz nu nf mp pw pg pn ws sb tk to tv vu wf".split(" "),
+  "Amérique du Nord": "ai ag aw bs bb bz bm vg ca ky cr cu cw dm do sv gl gd gp gt ht hn jm mq mx ms ni pa pr bl kn lc mf pm vc sx tt tc us vi".split(" "),
+  "Amérique du Sud": "ar bo br cl co ec fk gf gy py pe sr uy ve".split(" "),
+  "Antarctique": "aq bv gs tf hm".split(" "),
+};
+const CC_CONTINENT = {};
+for (const [cont, codes] of Object.entries(CONTINENT_BY_CC)) for (const c of codes) CC_CONTINENT[c] = cont;
+// Continent d'une commune : d'abord sa géo mémorisée, sinon le pays historique.
+const continentOfCity = (city, country) =>
+  cityGeo.get(city)?.continent || CONTINENT_OF[country] || "Monde";
+// Enregistre/complète la géo d'une commune reçue du client (recherche ou géoloc).
+function rememberCity(name, { lat, lng, country, region, countryCode } = {}) {
+  if (!name) return;
+  const la = Number(lat), ln = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return; // pas de coord -> on ne mémorise pas
+  const cc = (countryCode || "").toString().toLowerCase().slice(0, 2);
+  const existing = cityGeo.get(name);
+  cityGeo.set(name, {
+    lat: la, lng: ln,
+    country: country || existing?.country || "—",
+    region: (region || existing?.region || "—").toString().slice(0, 60),
+    continent: CC_CONTINENT[cc] || existing?.continent || CONTINENT_OF[country] || "Monde",
+  });
+}
 
 // Plus AUCUN rival fictif : les classements (villes, pays, continents, régions,
 // ligues) ne reflètent que des scores RÉELS de vrais joueurs. Vide au départ,
@@ -189,11 +229,25 @@ function buildSnapshot() {
     cities: [...cities.entries()].map(([name, c]) => ({
       name, country: c.country, score: c.score, league: leagueOf.get(name) || 1,
     })),
+    // Géo des communes connues (coord/région/continent) -> carte + classements
+    // survivent au redémarrage, même les communes sans score cette saison.
+    geo: [...cityGeo.entries()].map(([name, g]) => ({ name, ...g })),
     accounts: [...accounts.entries()].map(([token, a]) => ({ token, ...a })),
   };
 }
 function hydrate(snap) {
   if (!snap || !Array.isArray(snap.cities)) return false;
+  // Restaure d'ABORD la géo (avant bumpTerritory, qui lit le continent des villes).
+  if (Array.isArray(snap.geo)) {
+    for (const g of snap.geo) {
+      if (!g || !g.name) continue;
+      cityGeo.set(g.name, {
+        lat: Number(g.lat), lng: Number(g.lng),
+        country: g.country || "—", region: g.region || "—",
+        continent: g.continent || CONTINENT_OF[g.country] || "Monde",
+      });
+    }
+  }
   cities.clear(); countries.clear(); continents.clear(); leagueOf.clear();
   for (const c of snap.cities) {
     leagueOf.set(c.name, c.league || 1);
@@ -249,7 +303,7 @@ function bumpTerritory(city, country, points) {
   p.passes += 1;
   countries.set(country, p);
 
-  const cont = continentOf(country);
+  const cont = continentOfCity(city, country);
   const k = continents.get(cont) || { score: 0, passes: 0 };
   k.score += points;
   k.passes += 1;
@@ -337,8 +391,15 @@ function publicPlayer(p) {
 // --- Un joueur rejoint : compte durable (pseudo + rang gardés entre appareils) -
 app.post("/api/join", (req, res) => {
   const name = (req.body?.name || "Anonyme").toString().slice(0, 20);
-  const city = (req.body?.city || "Inconnue").toString().slice(0, 30);
-  const country = (req.body?.country || "France").toString().slice(0, 30);
+  const city = (req.body?.city || "Inconnue").toString().slice(0, 60);
+  const country = (req.body?.country || "France").toString().slice(0, 40);
+
+  // Géo de la commune (recherche OpenStreetMap ou géoloc côté client) : on la
+  // mémorise pour la carte + les classements région/continent, villes du monde.
+  rememberCity(city, {
+    lat: req.body?.lat, lng: req.body?.lng, country,
+    region: req.body?.region, countryCode: req.body?.countryCode,
+  });
 
   let token = (req.body?.token || "").toString();
   let account = token && accounts.get(token);
@@ -612,8 +673,8 @@ function buildState(playerId) {
     me: me ? publicPlayer(me) : null,
     myCityRank: me ? rankOf(cities, me.city) : null,
     myCountryRank: me ? rankOf(countries, me.country) : null,
-    myContinentRank: me ? rankOf(continents, continentOf(me.country)) : null,
-    myContinent: me ? continentOf(me.country) : null,
+    myContinentRank: me ? rankOf(continents, continentOfCity(me.city, me.country)) : null,
+    myContinent: me ? continentOfCity(me.city, me.country) : null,
     myLeague: me ? myLeagueInfo(me.city) : null,
     myCountry: me ? me.country : null,
     myRegion: me ? regionOf(me.city) : null,
@@ -672,15 +733,20 @@ app.get("/api/country", (req, res) => {
 app.get("/api/map", (_req, res) => {
   const top = leaderboard(cities, 1)[0]?.name || null;
   const maxScore = Math.max(1, ...[...cities.values()].map((c) => c.score));
-  const nodes = Object.entries(CITY_GEO).map(([name, geo]) => {
-    const c = cities.get(name);
-    return {
-      name, lat: geo.lat, lng: geo.lng, country: geo.country,
-      score: c?.score || 0,
-      intensity: c ? c.score / maxScore : 0, // 0..1 pour la taille/opacité
-      leader: name === top,
-    };
-  });
+  const SEEDS = new Set(Object.keys(CITY_GEO));
+  const nodes = [...cityGeo.entries()]
+    // On trace les grandes villes historiques (toujours) + toute commune qui a
+    // marqué des points cette saison (évite une carte surchargée de 0).
+    .filter(([name]) => SEEDS.has(name) || (cities.get(name)?.score || 0) > 0)
+    .map(([name, geo]) => {
+      const c = cities.get(name);
+      return {
+        name, lat: geo.lat, lng: geo.lng, country: geo.country,
+        score: c?.score || 0,
+        intensity: c ? c.score / maxScore : 0, // 0..1 pour la taille/opacité
+        leader: name === top,
+      };
+    });
   res.json({ season: seasonInfo(), leader: top, nodes });
 });
 
@@ -712,6 +778,11 @@ function adminResetHandler(req, res) {
 
   // Territoires + chaîne + ligues + panthéon -> zéro.
   cities.clear(); countries.clear(); continents.clear(); leagueOf.clear();
+  // Géo : on repart des grandes villes historiques (oublie les communes apprises).
+  cityGeo.clear();
+  for (const [name, g] of Object.entries(CITY_GEO)) {
+    cityGeo.set(name, { lat: g.lat, lng: g.lng, country: g.country, region: g.region, continent: CONTINENT_OF[g.country] || "Monde" });
+  }
   chain.current = 0; chain.best = 0; chain.lastBreakBy = null; chain.lastBreakCity = null;
   hallOfFame.length = 0;
   players.clear(); // sessions live : les joueurs se ré-enregistrent à la prochaine action

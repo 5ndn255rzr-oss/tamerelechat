@@ -48,6 +48,18 @@
     padding:12px; font-size:14px; font-weight:700; width:100%; cursor:pointer; }
   .ghostbtn:active { transform: scale(.98); }
 
+  /* --- Recherche de commune (autocomplétion mondiale) --- */
+  .cityfield { position:relative; }
+  .cityac { position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:30;
+    background:#120f20; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    max-height:240px; overflow-y:auto; display:none; box-shadow:0 12px 30px rgba(0,0,0,.5); }
+  .cityac.on { display:block; }
+  .cityac .opt { padding:12px 14px; cursor:pointer; font-size:15px; border-bottom:1px solid rgba(124,92,255,.10); }
+  .cityac .opt:last-child { border-bottom:0; }
+  .cityac .opt:active, .cityac .opt.hl { background:#221c3d; }
+  .cityac .opt .sub { display:block; font-size:12px; color:#8a83ad; margin-top:2px; }
+  .cityac .hint { padding:12px 14px; font-size:13px; color:#8a83ad; }
+
   /* --- Boutique --- */
   .sheet { width:92%; max-width:400px; max-height:80vh; overflow-y:auto; background:#0c0a16;
     border:1px solid var(--line); border-radius:22px; padding:20px; }
@@ -260,8 +272,11 @@
   <!-- Écran d'entrée -->
   <div id="join">
     <input id="name" placeholder="Ton blaze" maxlength="20" />
-    <select id="city"></select>
-    <button class="ghostbtn" id="gpsBtn">📍 Utiliser ma position</button>
+    <div class="cityfield">
+      <input id="city" placeholder="Ta ville / commune" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" />
+      <div id="cityList" class="cityac"></div>
+    </div>
+    <button class="ghostbtn" id="gpsBtn">📍 Me géolocaliser</button>
     <div id="gpsNote" style="font-size:12px;color:#8a83ad;text-align:center;min-height:16px"></div>
     <button class="primary" id="joinBtn">Entrer dans la chaîne</button>
   </div>
@@ -674,54 +689,128 @@ const CITY_GEO = {
   "New York": { lat: 40.71, lng: -74.0, country: "USA" }, "Los Angeles": { lat: 34.05, lng: -118.24, country: "USA" },
   "Montréal": { lat: 45.5, lng: -73.57, country: "Canada" },
 };
-(function fillCities() {
-  const sel = $("city");
-  Object.keys(CITY_GEO).sort().forEach((n) => {
-    const o = document.createElement("option"); o.value = n; o.textContent = `${n} (${CITY_GEO[n].country})`;
-    if (n === "Paris") o.selected = true; sel.appendChild(o);
-  });
-})();
+// --- Recherche de commune : autocomplétion MONDIALE via OpenStreetMap ---------
+// Nominatim (OSM) : recherche + géocodage inverse, couverture mondiale, gratuit.
+// Politique d'usage : 1 requête/s max -> on débounce la frappe et on annule la
+// requête en vol. Le Referer de la WebView identifie l'app (conforme). À grande
+// échelle, prévoir un géocodeur dédié (LocationIQ/Mapbox) ou un Nominatim auto-
+// hébergé. Les appels partent de l'appareil du joueur (pas du serveur).
+const NOMINATIM = "https://nominatim.openstreetmap.org";
+let selectedPlace = null; // { name, lat, lng, country, countryCode, region }
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-// --- GPS : place le joueur sur la ville la plus proche ---
-function nearestCity(lat, lng) {
-  const d2 = (a, b, c, e) => { const dy = a - c, dx = (b - e) * Math.cos((a + c) / 2 * Math.PI / 180); return dy * dy + dx * dx; };
-  let best = null, bd = Infinity;
-  for (const [n, g] of Object.entries(CITY_GEO)) { const d = d2(lat, lng, g.lat, g.lng); if (d < bd) { bd = d; best = n; } }
-  return best;
+// Commune la plus pertinente dans une adresse Nominatim.
+function communeName(a, fallback) {
+  return a.city || a.town || a.village || a.municipality || a.hamlet
+    || a.suburb || a.county || a.state || fallback || "Ici";
 }
+function placeFromResult(r) {
+  const a = r.address || {};
+  return {
+    name: communeName(a, (r.display_name || "").split(",")[0]).toString().slice(0, 60),
+    lat: parseFloat(r.lat), lng: parseFloat(r.lon),
+    country: a.country || "—",
+    countryCode: (a.country_code || "").toLowerCase(),
+    region: a.state || a.region || a.county || "—",
+  };
+}
+
+const cityInput = $("city"), cityList = $("cityList");
+let acTimer = null, acAbort = null, acItems = [];
+function hideAc() { cityList.classList.remove("on"); }
+function showHint(txt) { cityList.innerHTML = `<div class="hint">${esc(txt)}</div>`; cityList.classList.add("on"); }
+function pick(p) {
+  selectedPlace = p;
+  cityInput.value = p.name;
+  hideAc();
+  $("gpsNote").textContent = `📍 ${p.name}${p.region && p.region !== "—" ? " · " + p.region : ""}, ${p.country}`;
+}
+function renderAc(results) {
+  acItems = results.map(placeFromResult).filter((p) => Number.isFinite(p.lat));
+  if (!acItems.length) { showHint("Aucune commune trouvée."); return; }
+  cityList.innerHTML = acItems.map((p, i) =>
+    `<div class="opt" data-i="${i}">${esc(p.name)}<span class="sub">${p.region && p.region !== "—" ? esc(p.region) + " · " : ""}${esc(p.country)}</span></div>`
+  ).join("");
+  cityList.classList.add("on");
+  cityList.querySelectorAll(".opt").forEach((el) => { el.onclick = () => pick(acItems[+el.dataset.i]); });
+}
+async function searchCity(q) {
+  if (acAbort) { try { acAbort.abort(); } catch (e) {} }
+  acAbort = new AbortController();
+  try {
+    const url = `${NOMINATIM}/search?format=jsonv2&addressdetails=1&limit=6&accept-language=fr&q=${encodeURIComponent(q)}`;
+    const data = await fetch(url, { signal: acAbort.signal, headers: { Accept: "application/json" } }).then((x) => x.json());
+    renderAc(Array.isArray(data) ? data : []);
+  } catch (e) { if (e.name !== "AbortError") showHint("Recherche indisponible, réessaie."); }
+}
+cityInput.addEventListener("input", () => {
+  selectedPlace = null; // toute saisie invalide la sélection précédente
+  const q = cityInput.value.trim();
+  clearTimeout(acTimer);
+  if (q.length < 3) { hideAc(); return; }
+  showHint("Recherche…");
+  acTimer = setTimeout(() => searchCity(q), 450); // débounce -> respecte 1 req/s
+});
+cityInput.addEventListener("blur", () => setTimeout(hideAc, 180)); // laisse le clic passer
+
+// --- Géoloc : ta VRAIE commune via géocodage inverse OpenStreetMap ------------
 $("gpsBtn").onclick = () => {
   if (!navigator.geolocation) { $("gpsNote").textContent = "GPS indisponible sur cet appareil."; return; }
   $("gpsNote").textContent = "📍 localisation…";
-  navigator.geolocation.getCurrentPosition(
-    (p) => {
-      const city = nearestCity(p.coords.latitude, p.coords.longitude);
-      $("city").value = city;
-      $("gpsNote").textContent = `📍 ville la plus proche : ${city}`;
-    },
-    () => { $("gpsNote").textContent = "Position refusée — choisis ta ville dans la liste."; },
-    { enableHighAccuracy: false, timeout: 8000 }
-  );
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const url = `${NOMINATIM}/reverse?format=jsonv2&addressdetails=1&accept-language=fr&lat=${lat}&lon=${lng}`;
+      const r = await fetch(url, { headers: { Accept: "application/json" } }).then((x) => x.json());
+      const p = placeFromResult(r);
+      if (!Number.isFinite(p.lat)) { p.lat = lat; p.lng = lng; }
+      pick(p);
+    } catch (e) { $("gpsNote").textContent = "Impossible de trouver ta commune — tape-la à la main."; }
+  }, () => { $("gpsNote").textContent = "Position refusée — tape ta commune ci-dessus."; },
+  { enableHighAccuracy: true, timeout: 10000 });
 };
 
-// --- compte : pseudo + ville + rang gardés (token local, réutilisable) ---
+// Résout le lieu à envoyer : sélection explicite, sinon texte tapé géocodé,
+// sinon dernier lieu mémorisé, sinon repli Paris.
+async function resolvePlace() {
+  if (selectedPlace) return selectedPlace;
+  const q = cityInput.value.trim();
+  if (q.length >= 2) {
+    try {
+      const url = `${NOMINATIM}/search?format=jsonv2&addressdetails=1&limit=1&accept-language=fr&q=${encodeURIComponent(q)}`;
+      const data = await fetch(url, { headers: { Accept: "application/json" } }).then((x) => x.json());
+      if (Array.isArray(data) && data[0]) { const p = placeFromResult(data[0]); if (Number.isFinite(p.lat)) return p; }
+    } catch (e) {}
+  }
+  try { const s = JSON.parse(localStorage.getItem("relais_place") || "null"); if (s && s.name) return s; } catch (e) {}
+  const g = CITY_GEO["Paris"];
+  return { name: "Paris", lat: g.lat, lng: g.lng, country: "France", countryCode: "fr", region: "Île-de-France" };
+}
+
+// --- compte : pseudo + commune + rang gardés (token local, réutilisable) ---
 try {
   const savedName = localStorage.getItem("relais_name");
   if (savedName) $("name").value = savedName;
-  const savedCity = localStorage.getItem("relais_city");
-  if (savedCity && CITY_GEO[savedCity]) $("city").value = savedCity;
+  const sp = JSON.parse(localStorage.getItem("relais_place") || "null");
+  if (sp && sp.name) { selectedPlace = sp; cityInput.value = sp.name; }
+  else { const sc = localStorage.getItem("relais_city"); if (sc) cityInput.value = sc; }
 } catch (e) {}
 
 // --- rejoindre (écran d'accueil OU reprise auto au lancement) ---
 async function enterGame() {
   const name = $("name").value.trim() || "Anonyme";
-  const city = $("city").value, country = CITY_GEO[city]?.country || "France";
+  const place = await resolvePlace();
   let token = null; try { token = localStorage.getItem("relais_token"); } catch (e) {}
-  const res = await post("/api/join", { name, city, country, token });
+  const res = await post("/api/join", {
+    name, city: place.name, country: place.country, countryCode: place.countryCode,
+    region: place.region, lat: place.lat, lng: place.lng, token,
+  });
   playerId = res.playerId;
   try {
     localStorage.setItem("relais_token", res.token);
     localStorage.setItem("relais_name", name);
-    localStorage.setItem("relais_city", city);
+    localStorage.setItem("relais_city", place.name);
+    localStorage.setItem("relais_place", JSON.stringify(place));
   } catch (e) {}
   if (res.me.xp > 0) $("seasonLine").textContent = `Bon retour ${name} — rang ${res.me.tier} (${res.me.xp} xp) restauré ✅`;
   applyMe(res.me);
@@ -745,10 +834,7 @@ setTimeout(() => {
   try {
     const hasToken = !!localStorage.getItem("relais_token");
     const savedCity = localStorage.getItem("relais_city");
-    if (hasToken && savedCity && CITY_GEO[savedCity]) {
-      $("city").value = savedCity;
-      enterGame();
-    }
+    if (hasToken && savedCity) enterGame(); // resolvePlace() reprend le lieu mémorisé
   } catch (e) {}
 }, 0);
 
