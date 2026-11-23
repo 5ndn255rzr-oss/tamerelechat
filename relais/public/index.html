@@ -703,20 +703,26 @@ $("gpsBtn").onclick = () => {
   );
 };
 
-// --- compte : pseudo + rang gardés (token local, réutilisable entre appareils) ---
+// --- compte : pseudo + ville + rang gardés (token local, réutilisable) ---
 try {
   const savedName = localStorage.getItem("relais_name");
   if (savedName) $("name").value = savedName;
+  const savedCity = localStorage.getItem("relais_city");
+  if (savedCity && CITY_GEO[savedCity]) $("city").value = savedCity;
 } catch (e) {}
 
-// --- rejoindre ---
-$("joinBtn").onclick = async () => {
+// --- rejoindre (écran d'accueil OU reprise auto au lancement) ---
+async function enterGame() {
   const name = $("name").value.trim() || "Anonyme";
   const city = $("city").value, country = CITY_GEO[city]?.country || "France";
   let token = null; try { token = localStorage.getItem("relais_token"); } catch (e) {}
   const res = await post("/api/join", { name, city, country, token });
   playerId = res.playerId;
-  try { localStorage.setItem("relais_token", res.token); localStorage.setItem("relais_name", name); } catch (e) {}
+  try {
+    localStorage.setItem("relais_token", res.token);
+    localStorage.setItem("relais_name", name);
+    localStorage.setItem("relais_city", city);
+  } catch (e) {}
   if (res.me.xp > 0) $("seasonLine").textContent = `Bon retour ${name} — rang ${res.me.tier} (${res.me.xp} xp) restauré ✅`;
   applyMe(res.me);
   $("join").style.display = "none";
@@ -727,7 +733,24 @@ $("joinBtn").onclick = async () => {
   newZone();
   requestAnimationFrame(loop);
   connectStream();
-};
+}
+$("joinBtn").onclick = enterGame;
+
+// Reprise automatique : si un compte existe déjà (token + ville mémorisée), on
+// saute l'écran d'accueil et on retombe DIRECT dans le jeu. L'app iOS recharge
+// la page à chaque ouverture (contrainte iOS), mais l'utilisateur ne repasse
+// plus par l'inscription — il reprend là où il en était, rang restauré.
+// setTimeout(0) : on attend que tout le script soit défini avant d'appeler.
+setTimeout(() => {
+  try {
+    const hasToken = !!localStorage.getItem("relais_token");
+    const savedCity = localStorage.getItem("relais_city");
+    if (hasToken && savedCity && CITY_GEO[savedCity]) {
+      $("city").value = savedCity;
+      enterGame();
+    }
+  } catch (e) {}
+}, 0);
 
 const TIER_ORDER = ["Bronze", "Argent", "Or", "Platine", "Diamant", "Maître", "Champion", "Légende"];
 const TIER_PREVIEW = [
