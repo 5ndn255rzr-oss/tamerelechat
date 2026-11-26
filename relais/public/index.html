@@ -60,6 +60,16 @@
   .cityac .opt .sub { display:block; font-size:12px; color:#8a83ad; margin-top:2px; }
   .cityac .hint { padding:12px 14px; font-size:13px; color:#8a83ad; }
 
+  /* --- Invitation à noter (one-shot) --- */
+  .ratecard { margin-top:12px; background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:14px; text-align:center; font-size:14px; color:#c9c2e8; }
+  .ratecard .raterow { display:flex; gap:10px; margin-top:12px; }
+  .rateyes { flex:2; padding:12px; border:0; border-radius:14px; font-weight:800; font-size:14px; color:#fff;
+    background:var(--accent); cursor:pointer; }
+  .rateno { flex:1; padding:12px; border:1px solid var(--line); border-radius:14px; font-weight:700; font-size:14px;
+    color:#9a92c0; background:#221c3d; cursor:pointer; }
+  .rateyes:active, .rateno:active { transform:scale(.98); }
+
   /* --- Boutique --- */
   .sheet { width:92%; max-width:400px; max-height:80vh; overflow-y:auto; background:#0c0a16;
     border:1px solid var(--line); border-radius:22px; padding:20px; }
@@ -340,6 +350,13 @@
       <button id="shareBtn" class="actbtn">🔥 Défie tes potes</button>
     </div>
     <div class="online" id="online"></div>
+    <div id="rateCard" class="ratecard" style="display:none">
+      <span>Tu aimes RELAIS ? Un avis ⭐ aide énormément le jeu à grandir 🙏</span>
+      <div class="raterow">
+        <button id="rateYes" class="rateyes">Laisser un avis ⭐</button>
+        <button id="rateNo" class="rateno">Plus tard</button>
+      </div>
+    </div>
     <div style="text-align:center;margin-top:12px">
       <a href="/privacy.html" style="color:#6f679a;font-size:12px">Politique de confidentialité</a>
     </div>
@@ -822,6 +839,7 @@ async function enterGame() {
   newZone();
   requestAnimationFrame(loop);
   connectStream();
+  maybeAskReview(); // invite à noter après quelques lancements (one-shot)
 }
 $("joinBtn").onclick = enterGame;
 
@@ -1081,14 +1099,33 @@ async function unlockItem(btn, type, id) {
 }
 
 // --- Partage (viralité) ---
+// Lien de l'app sur l'App Store (pour que les partages ramènent des INSTALLS).
+const APPSTORE_URL = "https://apps.apple.com/app/id6791576736";
+const REVIEW_URL = APPSTORE_URL + "?action=write-review";
 $("shareBtn").onclick = async () => {
-  const txt = `Je suis ${me?.tier || "Bronze"} sur RELAIS ✨ et ${me?.city || "ma ville"} grimpe au classement mondial. Tu tiens combien de temps la chaîne ? 🔥`;
+  const txt = `Je suis ${me?.tier || "Bronze"} sur RELAIS ✨ et ${me?.city || "ma ville"} grimpe au classement mondial. Tu tiens combien de temps la chaîne ? 🔥 Rejoins et défends ta ville 👇`;
   try {
-    if (navigator.share) await navigator.share({ title: "RELAIS ✨", text: txt, url: location.origin });
-    else { await navigator.clipboard.writeText(txt + " " + location.origin); $("online").textContent = "🔗 lien copié — envoie-le à tes potes !"; }
+    if (navigator.share) await navigator.share({ title: "RELAIS ✨", text: txt, url: APPSTORE_URL });
+    else { await navigator.clipboard.writeText(txt + " " + APPSTORE_URL); $("online").textContent = "🔗 lien copié — envoie-le à tes potes !"; }
   } catch (e) {}
 };
 
+// --- Invitation à noter : one-shot, après quelques parties (web-side) ---------
+// Pas de SKStoreReview natif (éviterait un rebuild) : on ouvre la page "écrire
+// un avis" de l'App Store. S'affiche au bout de ~3 lancements, une seule fois.
+$("rateYes").onclick = () => { try { localStorage.setItem("relais_reviewed", "1"); } catch (e) {} $("rateCard").style.display = "none"; location.href = REVIEW_URL; };
+$("rateNo").onclick = () => { try { localStorage.setItem("relais_reviewed", "later"); } catch (e) {} $("rateCard").style.display = "none"; };
+function maybeAskReview() {
+  let done = "", plays = 0;
+  try {
+    done = localStorage.getItem("relais_reviewed") || "";
+    plays = (parseInt(localStorage.getItem("relais_plays") || "0", 10) || 0) + 1;
+    localStorage.setItem("relais_plays", String(plays));
+  } catch (e) {}
+  if (done === "1") return;                   // a déjà noté -> plus jamais
+  if (done === "later" && plays < 8) return;  // a reporté -> on re-propose plus tard
+  if (plays >= 3) setTimeout(() => { const c = $("rateCard"); if (c) c.style.display = "block"; }, 2000);
+}
 // --- Skin d'étincelle / curseur équipé (cosmétique) ---
 const SPARK_SKINS = {
   default: { color: "#ffc93d" },
