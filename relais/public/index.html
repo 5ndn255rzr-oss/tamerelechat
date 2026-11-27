@@ -35,10 +35,17 @@
   h1 small { display:block; font-size:12px; font-weight:600; color:#9a92c0; letter-spacing:3px; margin-top:4px; }
 
   /* cartes "verre dépoli" premium (DA uniquement, zéro impact gameplay) */
-  .rankrow, .board, .leaguecard, .mapwrap, #arena, .ratecard {
+  .rankrow, .board, .leaguecard, .mapwrap, #arena, .ratecard, .sheet, .shopitem, .adbox, .epibox {
     backdrop-filter: blur(16px) saturate(1.25); -webkit-backdrop-filter: blur(16px) saturate(1.25);
     box-shadow: 0 14px 34px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.07);
   }
+  /* entrée des cartes en cascade (une fois, à l'arrivée en jeu) */
+  @keyframes riseIn { from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:translateY(0)} }
+  #game .chainbox, #game .rankrow, #game #arena, #game #leagueCard, #game .boards, #game .mapwrap, #game .actionrow {
+    animation: riseIn .5s cubic-bezier(.22,.9,.3,1) both;
+  }
+  #game .chainbox{animation-delay:.02s} #game .rankrow{animation-delay:.08s} #game #arena{animation-delay:.14s}
+  #game #leagueCard{animation-delay:.20s} #game .boards{animation-delay:.26s} #game .mapwrap{animation-delay:.32s} #game .actionrow{animation-delay:.36s}
 
   /* --- Join --- */
   #join { display:flex; flex-direction:column; gap:12px; margin-top:40px; }
@@ -69,7 +76,7 @@
   .actbtn:active { transform:scale(.97); }
   .modal { position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(6,4,14,.72); }
   .modal.on { display:flex; }
-  .adbox { width:86%; max-width:340px; background:#0c0a16; border:1px solid var(--line); border-radius:20px; padding:30px; text-align:center; }
+  .adbox { width:86%; max-width:340px; background:rgba(14,11,26,.82); border:1px solid var(--line); border-radius:20px; padding:30px; text-align:center; }
   .adlabel { font-size:11px; letter-spacing:3px; color:#6f679a; }
   .adcount { font-family:monospace; font-size:54px; font-weight:800; color:var(--gold); margin:8px 0; }
   .adsub { font-size:13px; color:#9a92c0; }
@@ -100,7 +107,7 @@
   .rateyes:active, .rateno:active { transform:scale(.98); }
 
   /* --- Boutique --- */
-  .sheet { width:92%; max-width:400px; max-height:80vh; overflow-y:auto; background:#0c0a16;
+  .sheet { width:92%; max-width:400px; max-height:80vh; overflow-y:auto; background:rgba(14,11,26,.86);
     border:1px solid var(--line); border-radius:22px; padding:20px; }
   .sheet h2 { font-size:20px; margin-bottom:2px; }
   .sheet .sub { font-size:12px; color:#9a92c0; margin-bottom:14px; }
@@ -220,23 +227,21 @@
   .chainval.broke { animation: chainBroke .5s ease-out; }
   @keyframes chainBroke { 0%{color:#e74c3c; transform:scale(1.25)} 35%{transform:scale(.88) translateX(-5px)} 60%{transform:translateX(5px)} 100%{transform:scale(1)} }
 
-  /* --- Lumières latérales (fête foraine / casino) --- */
-  .sidelights { position:fixed; top:0; bottom:0; width:24px; z-index:3; pointer-events:none;
-    display:flex; flex-direction:column; justify-content:space-around; align-items:center; padding:10px 0;
-    animation: hueSpin 9s linear infinite; }
+  /* --- Lumières latérales (ambiance, version sobre/premium) --- */
+  .sidelights { position:fixed; top:0; bottom:0; width:16px; z-index:3; pointer-events:none;
+    display:flex; flex-direction:column; justify-content:space-around; align-items:center; padding:10px 0; opacity:.55; }
   .sidelights.left { left:0; } .sidelights.right { right:0; }
-  @keyframes hueSpin { to { filter:hue-rotate(360deg); } }
-  .bulb { width:11px; height:11px; border-radius:50%; box-shadow:0 0 12px currentColor; animation: bulbBlink 1s infinite; }
-  @keyframes bulbBlink { 0%,100%{opacity:.18; transform:scale(.6)} 50%{opacity:1; transform:scale(1.25)} }
-  body.frenzy .sidelights { animation-duration:2.4s; width:30px; }
-  body.frenzy .bulb { animation-duration:.32s; box-shadow:0 0 20px currentColor; }
+  .bulb { width:7px; height:7px; border-radius:50%; box-shadow:0 0 10px currentColor; animation: bulbBlink 2.4s ease-in-out infinite; }
+  @keyframes bulbBlink { 0%,100%{opacity:.12; transform:scale(.55)} 50%{opacity:.85; transform:scale(1.05)} }
+  body.frenzy .sidelights { opacity:1; width:22px; }
+  body.frenzy .bulb { animation-duration:.5s; box-shadow:0 0 18px currentColor; }
 
   /* --- Avertissement épilepsie --- */
   .epimodal { position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:rgba(6,4,14,.92); }
   .epimodal.hide { display:none; }
-  .epibox { width:88%; max-width:360px; background:#0c0a16; border:1px solid var(--line); border-radius:20px; padding:26px 22px; text-align:center; }
+  .epibox { width:88%; max-width:360px; background:rgba(14,11,26,.9); border:1px solid var(--line); border-radius:20px; padding:26px 22px; text-align:center; }
   .epiicon { font-size:42px; }
-  .epititle { font-weight:900; font-size:18px; margin:6px 0 10px; color:var(--gold); }
+  .epititle { font-family:var(--display); font-weight:700; font-size:19px; margin:6px 0 10px; color:var(--gold); }
   .epibox p { font-size:14px; color:#c9c2e8; line-height:1.55; margin-bottom:18px; }
 
   /* --- Curseur : emoji + arc-en-ciel --- */
@@ -254,19 +259,19 @@
     background:linear-gradient(60deg, transparent 28%, rgba(255,0,0,.16),rgba(255,165,0,.16),rgba(255,255,0,.16),rgba(0,200,0,.16),rgba(0,120,255,.16),rgba(148,0,211,.16), transparent 72%);
     background-size:260% 100%; animation: rainbowsweep 1.1s ease-out forwards; }
   @keyframes rainbowsweep { from{background-position:130% 0} to{background-position:-130% 0} }
-  .popbanner { position:fixed; top:38%; left:50%; z-index:49; pointer-events:none;
-    font-size:32px; font-weight:900; color:#fff; text-shadow:0 0 24px var(--gold); white-space:nowrap; animation: popbanner 1.3s ease-out forwards; }
+  .popbanner { position:fixed; top:38%; left:50%; z-index:49; pointer-events:none; font-family:var(--display);
+    font-size:32px; font-weight:700; color:#fff; text-shadow:0 0 24px var(--gold); white-space:nowrap; animation: popbanner 1.3s ease-out forwards; }
   @keyframes popbanner { 0%{opacity:0; transform:translate(-50%,-50%) scale(.5)} 20%{opacity:1; transform:translate(-50%,-50%) scale(1.15)} 35%{transform:translate(-50%,-50%) scale(1)} 80%{opacity:1} 100%{opacity:0; transform:translate(-50%,-50%) scale(1.1)} }
 
   /* --- Leaderboards --- */
   .boards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
   .board { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:12px; }
   .board h3 { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#9a92c0; margin-bottom:8px; }
-  .row { display:flex; font-size:13px; padding:4px 0; border-bottom:1px solid #262138; }
+  .row { display:flex; font-size:13px; padding:5px 0; border-bottom:1px solid rgba(150,128,230,.12); }
   .row:last-child { border-bottom:0; }
-  .row .n { width:18px; color:#8a83ad; }
+  .row .n { width:18px; color:#8a83ad; font-variant-numeric:tabular-nums; }
   .row .nm { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .row .sc { color:var(--gold); font-weight:800; }
+  .row .sc { color:var(--gold); font-weight:800; font-variant-numeric:tabular-nums; }
   .row.mine { color:#fff; }
   .row.mine .nm { color:#a29bfe; font-weight:800; }
   .online { text-align:center; font-size:12px; color:#8a83ad; margin-top:14px; }
@@ -649,8 +654,9 @@ function _firstGesture() {
     const el = document.getElementById(id); if (!el) return;
     for (let i = 0; i < 16; i++) {
       const b = document.createElement("i"); b.className = "bulb";
-      b.style.color = `hsl(${(i * 42) % 360},90%,60%)`;
-      b.style.animationDelay = (i * 0.08) + "s";
+      // Palette de marque (violet / or) plutôt qu'arc-en-ciel casino -> plus premium.
+      b.style.color = (i % 2 === 0) ? "#b89bff" : "#ffcf3d";
+      b.style.animationDelay = (i * 0.14) + "s";
       el.appendChild(b);
     }
   });
@@ -1343,7 +1349,7 @@ function schedulePop() {
   _popTimer = setTimeout(() => {
     if (playerId && Date.now() >= bannedUntil && !document.hidden) randomPop();
     schedulePop();
-  }, 11000 + Math.random() * 12000); // toutes les 11-23 s
+  }, 22000 + Math.random() * 20000); // toutes les 22-42 s (plus rare -> plus premium)
 }
 
 $("arena").addEventListener("click", attempt);
