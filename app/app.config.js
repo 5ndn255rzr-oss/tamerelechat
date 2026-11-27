@@ -35,8 +35,8 @@ module.exports = {
     icon: "./assets/icon.png",
     splash: {
       image: "./assets/splash.png",
-      resizeMode: "contain",
-      backgroundColor: "#0e0b18",
+      resizeMode: "cover",
+      backgroundColor: "#1a0d44",
     },
     assetBundlePatterns: ["**/*"],
     ios: {
@@ -61,7 +61,8 @@ module.exports = {
       versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#0e0b18",
+        backgroundImage: "./assets/adaptive-bg.png",
+        backgroundColor: "#201050",
       },
       permissions: [
         "ACCESS_COARSE_LOCATION", // ville la plus proche (facultatif)
